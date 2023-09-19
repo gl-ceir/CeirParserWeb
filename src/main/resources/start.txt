@@ -1,0 +1,73 @@
+Cron
+CeirParser,a-s,172.24.2.57,172.24.2.58,E-APP-01,E-APP-02,Y,172.24.3.89,./start.sh,/u01/ceirapp/BackendProcess/CeirParser
+
+[ceirapp@E-POR-01 CeirParser]$ ls
+bckUp1406  CEIRCdrParser.jar  conf  lib  start.sh
+
+
+
+
+#!/bin/bash
+#0:0:OK=Process is runing
+#1:1:Down=Process is down
+#2=Process does not exist
+set -x
+VAR=""
+cd /u01/ceirapp/BackendProcess/CeirParser
+if [ -e CEIRCdrParser.jar ]
+ then
+    status=`ps -ef |  grep CEIRFeatureFileUploader | grep java`
+   if [ "$status" != "$VAR" ]
+     then
+       echo 0:0:OK
+     else
+echo Plain
+     java  -Dlog4j.configuration=file:./conf/log4j.properties -cp ./lib/*:./CEIRCdrParser.jar com.glocks.parser.CEIRFeatureFileUploader
+   fi
+else
+ echo 2
+fi
+
+
+[ceirapp@E-POR-01 conf]$ ls
+apiConnectionTag.txt  config.properties  log4j.properties
+
+[ceirapp@E-POR-01 conf]$ cat config.properties
+api.tac.update=http://172.24.2.57:9502/CEIR/TypeApproved/update
+api.tac.delete=http://172.24.2.57:9502/CEIR/TypeApproved/delete
+api.tac.approve_reject=http://172.24.2.57:9502/CEIR/TypeApproved/approveReject
+jdbc_driver=oracle.jdbc.driver.OracleDriver
+#db_url=jdbc:oracle:thin:@dmc-prod-db:1521/dmcproddb
+username=CRESTELCEIR
+#password=CRESTELCEIR
+password=CRESTELCEIR123#
+localIp=172.24.2.57
+api.tac.update=http://172.24.2.57:9502/CEIR/TypeApproved/update
+api.tac.delete=http://172.24.2.57:9502/CEIR/TypeApproved/delete
+api.tac.approve_reject=http://172.24.2.57:9502/CEIR/TypeApproved/approveReject
+jdbc_driver=oracle.jdbc.driver.OracleDriver
+db_url=jdbc:oracle:thin:@PRO-DBR-SCAN:1522/dmcprdb
+username=CRESTELCEIR
+#password=CRESTELCEIR
+password=CRESTELCEIR123#
+localIp=172.24.2.57
+
+
+[ceirapp@E-POR-01 conf]$ cat log4j.properties
+#Configuring Root Logger
+#=======================
+log4j.rootLogger=debug, A
+log4j.appender.A=org.apache.log4j.DailyRollingFileAppender
+log4j.appender.A.DatePattern='.'yyyy-MM-dd
+log4j.appender.A.File=/u02/ceirdata/BackendProcess/CeirParser/logs/CEIRParser.log
+log4j.appender.A.Threshold=ERROR,INFO
+log4j.appender.A.layout=org.apache.log4j.PatternLayout
+log4j.appender.A.layout.ConversionPattern=[%d][%-5p][%C{1}][%F][%M()][%L][msg=%m]%n
+
+
+
+[ceirapp@E-POR-01 CeirParser]$ ls lib/
+apache-logging-log4j.jar  log4j-1.2.17.jar      ojdbc8-19.3.0.0.jar
+log4j-1.2.14.jar          log4j-api-2.14.0.jar  Rule_engine-0.0.1-SNAPSHOT-jar-with-dependencies.jar
+
+
