@@ -1,28 +1,25 @@
 package com.glocks.parser.service;
 
-import java.sql.Connection;
-import java.util.ArrayList;
-import java.util.Optional;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
+import com.gl.Rule_engine_Old.RuleEngineApplication;
 import com.glocks.dao.MessageConfigurationDbDao;
 import com.glocks.dao.NotificationDao;
+import com.glocks.dao.SysConfigurationDao;
 import com.glocks.dao.TypeApprovalDbDao;
 import com.glocks.dao.UserWithProfileDao;
+import com.glocks.dao.WebActionDbDao;
 import com.glocks.parser.CEIRFeatureFileFunctions;
-import com.glocks.parser.CEIRFeatureFileParser;
 import com.glocks.parser.ErrorFileGenrator;
 import com.glocks.parser.Rule;
 import com.glocks.pojo.HttpResponse;
 import com.glocks.pojo.MessageConfigurationDb;
-import com.glocks.pojo.Notification;
 import com.glocks.pojo.TypeApprovedDb;
-import com.glocks.pojo.UserWithProfile;
 import com.glocks.resttemplate.TacApiConsumer;
-import com.gl.Rule_engine_Old.RuleEngineApplication;
 import java.io.BufferedWriter;
+import java.sql.Connection;
+import java.util.ArrayList;
+import java.util.Optional;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class RegisterTac {
 
@@ -47,7 +44,7 @@ public class RegisterTac {
                 BufferedWriter bw = null;
                 int resultValue = 2;
                 String action_output = null;
-                String errorFilePath = CEIRFeatureFileParser.getErrorFilePath(conn);
+                String errorFilePath = new SysConfigurationDao().getTagValue(conn, "system_error_filepath");
                 TypeApprovedDb typeApprovedDb = typeApprovedDbOptional.get();
                 HttpResponse httpResponse = tacApiConsumer.approveReject(typeApprovedDb.getTxnId(), 1);
 
@@ -58,7 +55,7 @@ public class RegisterTac {
                 }
                 // gET form rule
 
-                String[] ruleArr = {"EXISTS_IN_TYPE_APPROVED_TAC", "1", "TAC", typeApprovedDb.getTac()};   // typeApproceTac with status =3 
+                String[] ruleArr = {"EXISTS_IN_TYPE_APPROVED_TAC", "1", "TAC", typeApprovedDb.getTac()};   // typeApproceTac with status =3
                 action_output = RuleEngineApplication.startRuleEngine(ruleArr, conn, bw);
                 logger.info("EXISTS_IN_TYPE_APPROV  result " + action_output);
                 if (action_output.equalsIgnoreCase("NO")) {   // tac Format
@@ -90,7 +87,6 @@ public class RegisterTac {
                     return;
                 }
 
-                
                 // Get users Profile.
 //                UserWithProfile userWithProfile = userWithProfileDao.getUserWithProfileById(conn, typeApprovedDb.getUserId());
 //                // Read message
@@ -115,11 +111,7 @@ public class RegisterTac {
 //                    logger.warn("No message is configured for tag [TAC_PROCESS_SUCCESFUL_MAIL_TO_USER]");
 //                    // System.out.println("No message is configured for tag [TAC_PROCESS_SUCCESFUL_MAIL_TO_USER]");
 //                }
-                
-                
-                
-
-                ceirfunction.updateFeatureFileStatus(conn, txnId, 4, operator, sub_feature);
+                new WebActionDbDao().updateFeatureFileStatus(conn, txnId, 4, operator, sub_feature);
             } else {
                 logger.info("Txn_id [" + txnId + "] is is not present in type_approved_db.");
                 // System.out.println("Txn_id [" + txnId + "] is is not present in type_approved_db.");
@@ -131,16 +123,3 @@ public class RegisterTac {
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-

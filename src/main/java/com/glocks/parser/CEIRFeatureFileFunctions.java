@@ -2,11 +2,12 @@ package com.glocks.parser;
 
 import com.gl.Rule_engine_Old.RuleEngineApplication;
 import com.glocks.constants.PropertyReader;
+import com.glocks.dao.SysConfigurationDao;
 import com.glocks.parser.service.ConsignmentInsertUpdate;
+import com.glocks.parser.service.StolenRecoverBlockUnBlockImpl;
 import com.glocks.util.Util;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
@@ -17,8 +18,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Level;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -28,36 +27,6 @@ public class CEIRFeatureFileFunctions {
 
     Logger logger = LogManager.getLogger(CEIRFeatureFileFunctions.class);
     static StackTraceElement l = new Exception().getStackTrace()[0];
-
-    public ResultSet getFileDetails(Connection conn, int state, String feature) {
-        String featureStmt = "";
-        if (feature != null) {
-            featureStmt = " and feature =  '" + feature + "' ";
-        }
-        Statement stmt = null;
-        ResultSet rs = null;
-        String query = null;
-        String limiter = " limit 1 ";
-        if (conn.toString().contains("oracle")) {
-            limiter = " fetch next 1 rows only ";
-        }
-        String stater = "";
-        if (state == 0) {
-            stater = " ( state  = 0  or  state  = 1  )  ";
-        } else {
-            stater = "  ( state  = 2   or  state  = 3 ) ";
-        }
-        try {                               //where state =  " + state + " 
-            query = "select * from web_action_db where " + stater + featureStmt + " and retry_count < 20  order by state desc , id asc " + limiter + "  ";
-            logger.info("Query to get File Details [" + query + "]");
-            stmt = conn.createStatement();
-            return rs = stmt.executeQuery(query);
-        } catch (Exception e) {
-            logger.error("" + l.getClassName() + "/" + l.getMethodName() + ":" + l.getLineNumber() + e);
-            // System.out.println("" + e);
-        }
-        return rs;
-    }
 
     public HashMap<String, String> getFeatureMapping(Connection conn, String feature, String usertype_name) {
         HashMap<String, String> feature_mapping = new HashMap<String, String>();
@@ -76,7 +45,7 @@ public class CEIRFeatureFileFunctions {
         try {
             query = "select * from feature_mapping_db where  feature='" + feature + "'  " + addQuery + "    " + limiter
                     + "   ";
-            logger.info("Query to get  (tFILEFUNCTIONgetFeatureMapping) File Details [" + query + "]");
+            logger.info("Query  File Details [" + query + "]");
 
             stmt = conn.createStatement();
             rs = stmt.executeQuery(query);
@@ -132,26 +101,6 @@ public class CEIRFeatureFileFunctions {
         }
 
         return feature_file_management_details;
-
-    }
-
-    public void updateFeatureFileStatus(Connection conn, String txn_id, int status, String feature, String subfeature) {
-        Statement stmt = null;
-        try {
-            String query = "update web_action_db set state=" + status + "  where    txn_id='" + txn_id + "' and feature='" + feature
-                    + "' and sub_feature='" + subfeature + "' ";
-            stmt = conn.createStatement();
-            stmt.executeUpdate(query);
-        } catch (Exception e) {
-            logger.info("errror" + e);
-        } finally {
-            try {
-                stmt.close();
-                conn.commit();
-            } catch (Exception e) {
-                logger.error("" + l.getClassName() + "/" + l.getMethodName() + ":" + l.getLineNumber() + e);
-            }
-        }
 
     }
 
@@ -260,7 +209,7 @@ public class CEIRFeatureFileFunctions {
         if ((feature.equalsIgnoreCase("stolen") || feature.equalsIgnoreCase("recovery")
                 || feature.equalsIgnoreCase("block") || feature.equalsIgnoreCase("unblock"))) {
             apiURI = "stolen-recovery_mailURI";
-            HashMap<String, String> map = CEIRFeatureFileParser.getStolenRecvryDetails(conn, txn_id);
+            HashMap<String, String> map = new StolenRecoverBlockUnBlockImpl().getStolenRecvryDetails(conn, txn_id);
             featureId = (map.get("request_type").equals("0") || map.get("request_type").equals("1")) ? "5" : "7";
             requestType = map.get("request_type");
             userId = map.get("user_id");
@@ -398,7 +347,7 @@ public class CEIRFeatureFileFunctions {
         String InsrtQry = null;
         boolean isOracle = conn.toString().contains("oracle");
         String dateFunction = Util.defaultDate(isOracle);
-        String period = new HexFileReader().checkGraceStatus(conn);
+        String period = new SysConfigurationDao().getTagValue(conn, "GRACE_PERIOD_END_DATE");
 
         try {
             String ValImei = "";
@@ -432,7 +381,7 @@ public class CEIRFeatureFileFunctions {
                         dvcDbCounter = new ConsignmentInsertUpdate().getCounterFromDeviceDb(conn, rs.getString("" + ValImei + "").substring(0, 14));
                         if (dvcDbCounter == 0) {
                             device_db_query = "insert  into device_db( counter ,  CREATED_ON , modified_on , DEVICE_ID_TYPE, DEVICE_STATUS,DEVICE_TYPE,IMEI_ESN_MEID,MULTIPLE_SIM_STATUS,FEATURE_NAME ,TXN_ID,period ,actual_imei ) "
-                                    + "values (  1 , " + dateFunction + " , " + dateFunction + " ,  '" + rs.getString("DEVICE_ID_TYPE") + "' , '" + rs.getString("DEVICE_STATUS") + "', '" + ((rs.getString("DEVICE_TYPE") == null  || rs.getString("DEVICE_TYPE").equals("")     ) ? "NA" : rs.getString("DEVICE_TYPE")) + "' , '" + rs.getString("" + ValImei + "").substring(0, 14) + "' , '" + rs.getString("MULTI_SIM_STATUS") + "' , 'Register Device' , '" + rs.getString("TXN_ID") + "', '" + period + "'  , '" + rs.getString("" + ValImei + "") + "'     )";
+                                    + "values (  1 , " + dateFunction + " , " + dateFunction + " ,  '" + rs.getString("DEVICE_ID_TYPE") + "' , '" + rs.getString("DEVICE_STATUS") + "', '" + ((rs.getString("DEVICE_TYPE") == null || rs.getString("DEVICE_TYPE").equals("")) ? "NA" : rs.getString("DEVICE_TYPE")) + "' , '" + rs.getString("" + ValImei + "").substring(0, 14) + "' , '" + rs.getString("MULTI_SIM_STATUS") + "' , 'Register Device' , '" + rs.getString("TXN_ID") + "', '" + period + "'  , '" + rs.getString("" + ValImei + "") + "'     )";
                         } else {
                             device_db_query = "update  device_db set counter = " + (dvcDbCounter + 1) + " where imei_esn_meid =   '" + rs.getString("" + ValImei + "").substring(0, 14) + "'   ";
                         }
@@ -461,9 +410,9 @@ public class CEIRFeatureFileFunctions {
     }
 
     private void markUserRegtoAllowedActiveDb(Connection conn, String ValImei) {
-        CEIRFeatureFileParser cEIRFeatureFileParser = null;
         Statement stmt = null;
-        String prdType = cEIRFeatureFileParser.checkGraceStatus(conn);
+        String prdType = new SysConfigurationDao().getTagValue(conn, "GRACE_PERIOD_END_DATE");
+
         logger.info("  PEROID [" + prdType + "]");
         try {
             ValImei = ValImei.substring(0, 14);
@@ -494,7 +443,7 @@ public class CEIRFeatureFileFunctions {
             qury = " delete from greylist_db where imei= '" + ValImei + "' ";
             logger.info("  " + qury);
             stmt.executeUpdate(qury);
-            qury = " delete from black_list where imei  = '" + ValImei + "'  ";
+//            qury = " delete from black_list where imei  = '" + ValImei + "'  ";
             logger.info("  " + qury);
             stmt.executeUpdate(qury);
         } catch (Exception e) {
@@ -537,7 +486,7 @@ public class CEIRFeatureFileFunctions {
                 rs = stmt.executeQuery(query);
                 while (rs.next()) {
 
-                    String[] ruleArr = {"EXIST_IN_END_USER_DEVICE_DB", "1", "IMEI", rs.getString("" + ValImei + "").substring(0, 14)};   // typeApproceTac with status =3 
+                    String[] ruleArr = {"EXIST_IN_END_USER_DEVICE_DB", "1", "IMEI", rs.getString("" + ValImei + "").substring(0, 14)};   // typeApproceTac with status =3
                     action_output = RuleEngineApplication.startRuleEngine(ruleArr, conn, bw);
                     logger.debug("action_output is " + action_output);
                     if (action_output.equalsIgnoreCase("Yes")) {
@@ -626,7 +575,7 @@ public class CEIRFeatureFileFunctions {
 //	public void pdateFeatureManagementStatus(Connection conn, String txn_id,int status,String table_name) {
 //		String query = "";
 //		Statement stmt = null;
-//		query = "update "+table_name+" set status="+status+" where txn_id='"+txn_id+"'";			
+//		query = "update "+table_name+" set status="+status+" where txn_id='"+txn_id+"'";
 //		logger.info("update management db status ["+query+"]");
 //		 // System.out.println("update management db status["+query+"]");
 //		try {
@@ -643,7 +592,7 @@ public class CEIRFeatureFileFunctions {
 //				e.printStackTrace();
 //			}
 //		}
-//		
+//
 //
 //void deleteFromCustom1(Connection conn, String txn_id, String string0) {
 //

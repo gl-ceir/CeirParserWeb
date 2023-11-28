@@ -6,24 +6,17 @@
 package com.glocks.parser;
 
 import com.glocks.constants.PropertyReader;
-
+import com.glocks.dao.SysConfigurationDao;
+import com.glocks.http.HttpURLConnectionExample;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.logging.Level;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -32,7 +25,7 @@ import org.apache.logging.log4j.Logger;
  * @author user
  */
 public class ErrorFileGenrator {
-     
+
     static StackTraceElement l = new Exception().getStackTrace()[0];
     public static PropertyReader propertyReader;
 
@@ -41,25 +34,27 @@ public class ErrorFileGenrator {
     public void gotoErrorFile(Connection conn, String txn_id, String errorString) {
         try {
             logger.info("Error File init");
-            Statement stmt = conn.createStatement();
-            String qury = "select value from  system_configuration_db  where tag  = 'system_error_filepath' ";
-            ResultSet resultmsdn = null;
-            resultmsdn = stmt.executeQuery(qury);
-            String errorPath = null;
+//            Statement stmt = conn.createStatement();
+//            String qury = "select value from  system_configuration_db  where tag  = 'system_error_filepath' ";
+//            ResultSet resultmsdn = null;
+//            resultmsdn = stmt.executeQuery(qury);
+//            String errorPath = null;
+//            try {
+//                while (resultmsdn.next()) {
+//                    errorPath = resultmsdn.getString(1);
+//                }
+//            } catch (Exception e) {
+//                logger.error("Error...errorPath." + e);
+//            }
+//            logger.debug("fileString is " + errorString);
+            String errorPath = new SysConfigurationDao().getTagValue(conn, "system_error_filepath");
             try {
-                while (resultmsdn.next()) {
-                    errorPath = resultmsdn.getString(1);
-                }
-            } catch (Exception e) {
-                logger.error("Error...errorPath." + e);
-            }
-            logger.debug("fileString is " + errorString);
-            try {
+
                 File file = new File(errorPath + txn_id);
                 file.mkdir();
-                String fileNameInput = errorPath + txn_id + "/" + txn_id + "_error.csv";       // 
+                String fileNameInput = errorPath + txn_id + "/" + txn_id + "_error.csv";       //
                 String fileName = txn_id + "_error.csv";
-                String filePath = errorPath + txn_id ; 
+                String filePath = errorPath + txn_id;
                 logger.info("fileNameInput...." + fileNameInput);
                 File fout = new File(fileNameInput);
                 FileOutputStream fos = new FileOutputStream(fout, true);
@@ -69,7 +64,7 @@ public class ErrorFileGenrator {
                 bw.newLine();
                 bw.close();
 
-                redudencyApiConnect(fileName, txn_id,  errorPath + txn_id + "/");
+                new HttpURLConnectionExample().redudencyApiConnect(fileName, txn_id, errorPath + txn_id + "/");
             } catch (Exception e) {
                 logger.error("exception at File..." + e);
             }
@@ -94,46 +89,17 @@ public class ErrorFileGenrator {
                 bw.newLine();
             }
             bw.close();
-            redudencyApiConnect(txn_id + "_error.csv", txn_id,  errorPath + txn_id + "/");
+            new HttpURLConnectionExample().redudencyApiConnect(txn_id + "_error.csv", txn_id, errorPath + txn_id + "/");
         } catch (Exception e) {
             logger.error("Error + gotoErrorFilewithList " + e);
         }
-    }
-
-    public void redudencyApiConnect(String fileName, String txn_id, String fileNameInput) {
-
-        String tag = "http://$LOCAL_IP:9502/CEIR/uploadedFile/save";
-        logger.info("  uploadedFile tag  " + tag);
-        String aa = "";
-       propertyReader = new PropertyReader();
-        try {
-            aa = propertyReader.getConfigPropValue("localIp").trim();
-            logger.info("  .. " + aa);
-        } catch (Exception ex) {
-            logger.info("       " + ex);
-        }
-//          aa = "172.24.2.57";
-        tag = tag.replace("$LOCAL_IP", aa);
-        String serverId = aa.contains("57") ? "1" : "2";
-        
-        String responseBody = "{\n"
-                + "\"fileName\": \"" + fileName + "\",\n"
-                + "\"txnId\": \"" + txn_id + "\",\n"
-                + "\"filePath\": \"" + fileNameInput + "\",\n"
-                + "\"serverId\": " + serverId + " \n"
-                + "}";
-        logger.info("  after Replace  " + tag);
-        logger.info("responseBody after Replace  " + responseBody);
-
-        HttpApiConnecter(tag, responseBody);
-
     }
 
     public void writeErrorMessageInFile(String errorPath, String txn_id, String errorString) {
         try {
             File file = new File(errorPath + txn_id);
             file.mkdir();
-            String fileNameInput = errorPath + txn_id + "/" + txn_id + "_error.csv";       // 
+            String fileNameInput = errorPath + txn_id + "/" + txn_id + "_error.csv";       //
             logger.info("fileNameInput...." + fileNameInput);
             logger.info("errorString...." + errorString);
             File fout = new File(fileNameInput);
@@ -142,7 +108,7 @@ public class ErrorFileGenrator {
             bw.write(errorString);
             bw.newLine();
             bw.close();
-                 redudencyApiConnect(txn_id + "_error.csv", txn_id, errorPath + txn_id + "/");
+            new HttpURLConnectionExample().redudencyApiConnect(txn_id + "_error.csv", txn_id, errorPath + txn_id + "/");
         } catch (Exception e) {
             logger.error("exception at File..." + e);
         }
@@ -215,55 +181,6 @@ public class ErrorFileGenrator {
 
         }
 
-    }
-
-    public void HttpApiConnecter(String tag, String responseBody) {
-        try {
-            URL url = new URL(tag);
-            HttpURLConnection hurl = (HttpURLConnection) url.openConnection();
-            hurl.setRequestMethod("POST");
-            hurl.setDoOutput(true);
-            hurl.setRequestProperty("Content-Type", "application/json");
-            hurl.setRequestProperty("Accept", "application/json");
-            OutputStreamWriter osw = new OutputStreamWriter(hurl.getOutputStream());
-            osw.write(responseBody);
-            osw.flush();
-            osw.close();
-            logger.info("DatA Putted");
-            hurl.connect();
-            BufferedReader in = new BufferedReader(new InputStreamReader(hurl.getInputStream()));
-            String temp = null;
-            StringBuilder sb = new StringBuilder();
-            while ((temp = in.readLine()) != null) {
-                sb.append(temp).append(" ");
-            }
-            String result = sb.toString();
-            in.close();
-            logger.info("OUTPUT result is .." + result);
-        } catch (Exception e) {
-            logger.error(responseBody + "  " + e);
-            new ErrorFileGenrator().apiConnectionErrorFileWriter(tag, responseBody);
-            logger.error("" + l.getClassName() + "/" + l.getMethodName() + ":" + l.getLineNumber() + e);
-        }
-    }
-
-    public HttpURLConnection getHttpConnection(String url, String type) {
-        URL uri = null;
-        HttpURLConnection con = null;
-        try {
-            uri = new URL(url);
-            con = (HttpURLConnection) uri.openConnection();
-            con.setRequestMethod(type); // type: POST, PUT, DELETE, GET
-            con.setDoOutput(true);
-            con.setDoInput(true);
-            con.setConnectTimeout(60000); // 60 secs...
-            con.setReadTimeout(60000); // 60 secs
-            con.setRequestProperty("Accept-Encoding", "application/json");
-            con.setRequestProperty("Content-Type", "application/json");
-        } catch (Exception e) {
-            logger.error("" + l.getClassName() + "/" + l.getMethodName() + ":" + l.getLineNumber() + e);
-        }
-        return con;
     }
 
 }

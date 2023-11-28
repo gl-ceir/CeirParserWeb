@@ -1,29 +1,17 @@
-package com.glocks.files;
+package com.glocks.AdditionalBackEndProcess;
 
 import java.io.File;
-import java.time.LocalDateTime;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.sql.Connection;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 
 public class FileList {
 
@@ -353,61 +341,60 @@ public class FileList {
         return result;
     }
 
-    public void moveCDRFile(Connection conn, String fileName, String opertorName1, String fileFolderPath, String source) {
-
-        String opertorName = opertorName1.toLowerCase();
-        DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH");
-        String date = df.format(new Date());
-
-        LocalDateTime myObj = LocalDateTime.now();
-
-        String timeSec = myObj.toString().substring((myObj.toString().length() - 3), (myObj.toString().length()));
-
-        File folder = null;
-        String storagePath = new com.glocks.parser.HexFileReader().getFilePath(conn, "CdrProcessedFileStoragePath");  //  with /
-        folder = new File(storagePath + opertorName);
-        try {
-            if (!folder.exists()) {
-                folder.mkdir();
-            }
-            logger.debug("folder Created ::" + folder);
-            folder = new File(storagePath + opertorName + "/" + source);
-            if (!folder.exists()) {
-                folder.mkdir();
-            }
-            folder = new File(storagePath + opertorName + "/" + source + "/" + date);    //+ "/" + datewithTime
-            if (!folder.exists()) {
-                folder.mkdir();
-            }
-
-            try {
-                Path path = Paths.get(folder + "/" + fileName);
-                Files.deleteIfExists(path);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-//        folder = new File(storagePath + opertorName + "/" + source + "/" + date  + "/" + timeSec);    //+ "/" + datewithTime
+//    public void moveCDRFile(Connection conn, String fileName, String opertorName1, String fileFolderPath, String source) {
+//
+//        String opertorName = opertorName1.toLowerCase();
+//        DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH");
+//        String date = df.format(new Date());
+//
+//        LocalDateTime myObj = LocalDateTime.now();
+//
+//        String timeSec = myObj.toString().substring((myObj.toString().length() - 3), (myObj.toString().length()));
+//
+//        File folder = null;
+//        String storagePath = new com.glocks.parser.HexFileReader().getFilePath(conn, "CdrProcessedFileStoragePath");  //  with /
+//        folder = new File(storagePath + opertorName);
+//        try {
 //            if (!folder.exists()) {
 //                folder.mkdir();
 //            }
-            logger.debug("folder Created ::" + folder);
-            logger.info(" File Move From ::" + fileFolderPath + fileName);
-//            logger.info(" File Move To ::" + storagePath + opertorName + "/" + source + "/" + date + "/" + timeSec + "/" + fileName);
-
-            Path temp = Files.move(Paths.get(fileFolderPath + fileName),
-                    Paths.get(storagePath + opertorName + "/" + source + "/" + date + "/" + fileName));
-                    //                    Paths.get(storagePath + opertorName + "/" + source + "/" + date + "/" + timeSec + "/" + fileName));
-                    
-            if (temp != null) {
-                logger.info("File renamed and moved successfully");
-            } else {
-                logger.warn("Failed to move the file");
-            }
-        } catch (IOException e) {
-            logger.error("Error :" + e);
-        }
-
-    }
-
+//            logger.debug("folder Created ::" + folder);
+//            folder = new File(storagePath + opertorName + "/" + source);
+//            if (!folder.exists()) {
+//                folder.mkdir();
+//            }
+//            folder = new File(storagePath + opertorName + "/" + source + "/" + date);    //+ "/" + datewithTime
+//            if (!folder.exists()) {
+//                folder.mkdir();
+//            }
+//
+//            try {
+//                Path path = Paths.get(folder + "/" + fileName);
+//                Files.deleteIfExists(path);
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+//
+////        folder = new File(storagePath + opertorName + "/" + source + "/" + date  + "/" + timeSec);    //+ "/" + datewithTime
+////            if (!folder.exists()) {
+////                folder.mkdir();
+////            }
+//            logger.debug("folder Created ::" + folder);
+//            logger.info(" File Move From ::" + fileFolderPath + fileName);
+////            logger.info(" File Move To ::" + storagePath + opertorName + "/" + source + "/" + date + "/" + timeSec + "/" + fileName);
+//
+//            Path temp = Files.move(Paths.get(fileFolderPath + fileName),
+//                    Paths.get(storagePath + opertorName + "/" + source + "/" + date + "/" + fileName));
+//            //                    Paths.get(storagePath + opertorName + "/" + source + "/" + date + "/" + timeSec + "/" + fileName));
+//
+//            if (temp != null) {
+//                logger.info("File renamed and moved successfully");
+//            } else {
+//                logger.warn("Failed to move the file");
+//            }
+//        } catch (IOException e) {
+//            logger.error("Error :" + e);
+//        }
+//
+//    }
 }

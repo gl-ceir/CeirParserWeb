@@ -4,16 +4,15 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
 import java.util.Objects;
 import java.util.Properties;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.context.annotation.PropertySources;
 import org.springframework.stereotype.Component;
-
 
 @Component
 @PropertySources({
@@ -34,8 +33,21 @@ public class PropertyReader {
 
     @Value("${oamdbName}")
     public String oamdbName;
-    
-    
+
+    @Value("${serverName}")
+    public String serverName;
+
+    @Value("#{'${yyMMddSource}'.split(',')}")
+    public List<String> yyMMddSource;
+
+    @Value("#{'${ddMMyySource}'.split(',')}")
+    public List<String> ddMMyySource;
+
+    @Value("#{'${ddMMyyyySource}'.split(',')}")
+    public List<String> ddMMyyyySource;
+
+    @Value("${yyyyMMddSource}")
+    public String yyyyMMddSource;
 
     private InputStream inputStream;
     Properties prop;

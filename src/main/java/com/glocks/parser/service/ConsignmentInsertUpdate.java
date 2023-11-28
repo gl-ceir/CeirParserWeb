@@ -1,36 +1,37 @@
 package com.glocks.parser.service;
 
+import com.glocks.dao.SourceTacInactiveInfoDao;
+import com.glocks.dao.SysConfigurationDao;
+import com.glocks.dao.WebActionDbDao;
+import com.glocks.http.HttpURLConnectionExample;
+import com.glocks.parser.CEIRFeatureFileFunctions;
+import com.glocks.parser.CEIRFeatureFileParser;
+import com.glocks.parser.ErrorFileGenrator;
+import com.glocks.parser.Rule;
+import com.glocks.parser.RuleFilter;
+import com.glocks.util.Util;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
+import java.io.OutputStreamWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
-import com.glocks.parser.ErrorFileGenrator;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import com.glocks.log.LogWriter;
-import com.glocks.parser.CEIRFeatureFileFunctions;
-import com.glocks.parser.CEIRFeatureFileParser;
-import com.glocks.parser.HexFileReader;
-import com.glocks.parser.Rule;
-import com.glocks.parser.RuleFilter;
-import com.glocks.util.Util;
-import java.io.BufferedWriter;
-import java.io.FileOutputStream;
-import java.io.OutputStreamWriter;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class ConsignmentInsertUpdate {
 
@@ -70,8 +71,8 @@ public class ConsignmentInsertUpdate {
         String period = "";
 //          int parser_base_limit = 0;
         int update_sno = 0;
-        LogWriter logWriter = new LogWriter();
-        String logPath = logWriter.getLogPath();
+
+        String logPath = new SysConfigurationDao().getTagValue(conn, "WebParserLogPath"); //"/u02/eirsdata/BackendProcess/CeirParser";
         String fileName = null;
         File file = null;
         int dvcDbCounter = 0;
@@ -83,13 +84,14 @@ public class ConsignmentInsertUpdate {
         int stolenRecvryBlock = 0;
         int totalCount = 0;
         CEIRFeatureFileParser cEIRFeatureFileParser = new CEIRFeatureFileParser();
-        String errorFilePath = cEIRFeatureFileParser.getErrorFilePath(conn);
+        WebActionDbDao webActionDbDao = new WebActionDbDao();
+        String errorFilePath = new SysConfigurationDao().getTagValue(conn, "system_error_filepath");
         BufferedWriter bw = null;
         try {
             File fileEr = new File(errorFilePath + txn_id);       //   errFile.gotoErrorFilewithList(errorFilePath, txn_id, fileErrorLines);
             fileEr.mkdir();
             String fileNameInput = errorFilePath + txn_id + "/" + txn_id + "_error.csv";
-            new ErrorFileGenrator().redudencyApiConnect(txn_id + "_error.csv", txn_id, errorFilePath + txn_id + "/");
+            new HttpURLConnectionExample().redudencyApiConnect(txn_id + "_error.csv", txn_id, errorFilePath + txn_id + "/");
             File fout = new File(fileNameInput);
             FileOutputStream fos = new FileOutputStream(fout, true);
             bw = new BufferedWriter(new OutputStreamWriter(fos));
@@ -110,11 +112,11 @@ public class ConsignmentInsertUpdate {
                 while (rs.next()) {
                     finalCount = rs.getInt(1);
                 }
-                logger.info("Query(STATE 3 ). " + query); // 
+                logger.info("Query(STATE 3 ). " + query); //
                 logger.info("State Result ..rawCount  " + rawCount + "  finalCount" + finalCount);
                 if (rawCount == finalCount) {
                     ceirfunction.UpdateStatusViaApi(conn, txn_id, 1, operator);
-                    ceirfunction.updateFeatureFileStatus(conn, txn_id, 4, operator, sub_feature);
+                    webActionDbDao.updateFeatureFileStatus(conn, txn_id, 4, operator, sub_feature);
                 } else {
                     query = " delete from   " + feature_file_mapping.get("output_device_db") + " where   txn_id='" + txn_id + "'   ";
                     rs = stmt.executeQuery(query);
@@ -122,7 +124,7 @@ public class ConsignmentInsertUpdate {
                     query = "update  " + operator + "_raw  set status = 'Init' where  txn_id='" + txn_id + "'  ";
                     rs = stmt.executeQuery(query);
                     logger.info("Query(STATE 3 ). " + query);
-                    ceirfunction.updateFeatureFileStatus(conn, txn_id, 2, operator, sub_feature);
+                    webActionDbDao.updateFeatureFileStatus(conn, txn_id, 2, operator, sub_feature);
                     conn.commit();
                 }
                 return;
@@ -153,17 +155,17 @@ public class ConsignmentInsertUpdate {
                 myWriter = new FileWriter(file);
             }
 
-            period = cEIRFeatureFileParser.checkGraceStatus(conn);  // grace / postgrace
-            
+            period = new SysConfigurationDao().getTagValue(conn, "GRACE_PERIOD_END_DATE");;  // grace / postgrace
+
             feature_file_management = ceirfunction.getFeatureFileManagement(conn, feature_file_mapping.get("mgnt_table_db"), txn_id); // select * from " + management_db + " where
             if (operator.equalsIgnoreCase("Stolen") || operator.equalsIgnoreCase("Recovery") || operator.equalsIgnoreCase("Block") || operator.equalsIgnoreCase("Unblock")) {
-                stolnRcvryDetails = cEIRFeatureFileParser.getStolenRecvryDetails(conn, txn_id);
+                stolnRcvryDetails = new StolenRecoverBlockUnBlockImpl().getStolenRecvryDetails(conn, txn_id);
                 stolenRecvryBlock = 1;
             }
             logger.info("OPERATOR/FEATURE--" + operator + "--SUBFEATURE--" + sub_feature + "");
             bw.write("DEVICETYPE,DeviceIdType,MultipleSIMStatus,S/NofDevice,IMEI,Devicelaunchdate,DeviceStatus, Error Code ,Error Message ");
             bw.newLine();
-            while (rs.next()) {   // raw db records 
+            while (rs.next()) {   // raw db records
                 logger.info("Served IMEI  =" + rs.getString("IMEIESNMEID"));
                 device_info.put("DeviceIdType", rs.getString("DeviceIdType"));
                 device_info.put("IMEIESNMEID", rs.getString("IMEIESNMEID"));
@@ -188,14 +190,14 @@ public class ConsignmentInsertUpdate {
                     bw.newLine();
                 } else {   // execute Action False
                     logger.info("Action_output." + my_rule_detail.get("action_output"));
-                    if (my_rule_detail.get("action_output").equalsIgnoreCase("Failure")) {//action is failed +  on which rule it is failed 
+                    if (my_rule_detail.get("action_output").equalsIgnoreCase("Failure")) {//action is failed +  on which rule it is failed
                         bw.write(fileArray + ", Action is not Completed for  " + my_rule_detail.get("rule_name"));
                         bw.newLine();
                     }
                     countError++;
                 }
                 update_sno = Integer.parseInt(rs.getString("sno"));
-            }                 // END While 
+            }                 // END While
 //               if (update_sno != 0) {
 //                    cEIRFeatureFileParser.updateRawLastSno(conn, operator, update_sno);
 //               }
@@ -203,8 +205,8 @@ public class ConsignmentInsertUpdate {
             String error_file_path = errorFilePath + txn_id + "/" + txn_id + "_error.csv";
             logger.info("CountError(if 0: Process Pass  )  -- " + countError);
             if (countError != 0) {
-                ceirfunction.UpdateStatusViaApi(conn, txn_id, 1, operator);    
-                ceirfunction.updateFeatureFileStatus(conn, txn_id, 4, operator, sub_feature); // update web_action_db
+                ceirfunction.UpdateStatusViaApi(conn, txn_id, 1, operator);
+                webActionDbDao.updateFeatureFileStatus(conn, txn_id, 4, operator, sub_feature); // update web_action_db
             } else {
                 logger.info("File  moving to old Folder ");
                 file = new File(errorFilePath + txn_id + "/old/");
@@ -252,11 +254,11 @@ public class ConsignmentInsertUpdate {
                     my_query = "insert into " + feature_file_mapping.get("output_device_db")
                             + " (device_id_type,created_on,device_launch_date,device_status,"
                             + "device_type,imei_esn_meid,modified_on,multiple_sim_status,period,sn_of_device,txn_id,user_id ,feature_name ,actual_imei ,tac  ) " //,feature_name
-                            + "values(" + "'" + rs1.getString("DeviceIdType") + "'," + "" + dateFunction + "," /// "dd-MMM-YY"                              
+                            + "values(" + "'" + rs1.getString("DeviceIdType") + "'," + "" + dateFunction + "," /// "dd-MMM-YY"
                             + "'" + rs1.getString("Devicelaunchdate") + "', '" + dvsStatus + "'  ,'" + rs1.getString("DeviceType") + "'," + "'" + rs1.getString("IMEIESNMEID").substring(0, 14)
                             + "'," + "" + dateFunction + "," + "'" + rs1.getString("MultipleSIMStatus") + "'," + "'"
                             + period + "'," + "'" + rs1.getString("SNofDevice") + "'," + "'" + txn_id + "'," + ""
-                            + feature_file_management.get("user_id") + ", '" + operator + "' , '" + rs1.getString("IMEIESNMEID") + "'  , '" + rs1.getString("IMEIESNMEID").substring(0, 8) + "'    )";    // "," + operator +  
+                            + feature_file_management.get("user_id") + ", '" + operator + "' , '" + rs1.getString("IMEIESNMEID") + "'  , '" + rs1.getString("IMEIESNMEID").substring(0, 8) + "'    )";    // "," + operator +
 
                     logger.info("Counnter si " + dvcDbCounter);
                     if (dvcDbCounter == 0) {
@@ -277,7 +279,7 @@ public class ConsignmentInsertUpdate {
                     }
 
                     device_custom_db_qry = "insert into device_custom_db (device_id_type,created_on,device_launch_date,device_status,"
-                            + "device_type,imei_esn_meid,modified_on,multiple_sim_status,period,sn_of_device,txn_id ,feature_name  ,user_id  ,actual_imei , tac  ) " // 
+                            + "device_type,imei_esn_meid,modified_on,multiple_sim_status,period,sn_of_device,txn_id ,feature_name  ,user_id  ,actual_imei , tac  ) " //
                             + "values('" + rs1.getString("DeviceIdType") + "'," + " " + dateFunction + "," + "'"
                             + rs1.getString("Devicelaunchdate") + "'," + "'" + rs1.getString("DeviceStatus") + "',"
                             + "'" + rs1.getString("DeviceType") + "'," + "'" + rs1.getString("IMEIESNMEID").substring(0, 14) + "',"
@@ -372,10 +374,10 @@ public class ConsignmentInsertUpdate {
                     logger.info(" sourceTacList SIZE:: " + sourceTacList.size());
                     Map<String, Long> map = sourceTacList.stream()
                             .collect(Collectors.groupingBy(c -> c, Collectors.counting()));
-                    map.forEach((k, v) -> new HexFileReader().insertSourceTac(conn, k, device_info.get("file_name"), v, "source_tac_inactive_info"));
+                    map.forEach((k, v) -> new SourceTacInactiveInfoDao().insertSourceTac(conn, k, device_info.get("file_name"), v, "source_tac_inactive_info"));
                 }
                 ceirfunction.UpdateStatusViaApi(conn, txn_id, 2, operator);
-                ceirfunction.updateFeatureFileStatus(conn, txn_id, 4, operator, sub_feature);
+                webActionDbDao.updateFeatureFileStatus(conn, txn_id, 4, operator, sub_feature);
             }       // ELSE CLOSE END
 
             if (operator.equalsIgnoreCase("STOCK") || operator.equalsIgnoreCase("CONSIGNMENT")) {
@@ -391,7 +393,7 @@ public class ConsignmentInsertUpdate {
         } catch (Exception e) {
             new ErrorFileGenrator().gotoErrorFile(conn, txn_id, "  Something went Wrong. Please Contact to Ceir Admin.  ");
             new CEIRFeatureFileFunctions().UpdateStatusViaApi(conn, txn_id, 1, operator);       //1 for reject
-            new CEIRFeatureFileFunctions().updateFeatureFileStatus(conn, txn_id, 5, operator, sub_feature); // update web_action_db    
+            webActionDbDao.updateFeatureFileStatus(conn, txn_id, 5, operator, sub_feature); // update web_action_db
 
             logger.error("Error.." + e);
         } finally {
@@ -408,11 +410,11 @@ public class ConsignmentInsertUpdate {
         try {
             String qry = " select a.imei_esn_meid  , a.sn_of_device      from device_importer_db  a , device_importer_db  b  where a.sn_of_device = b.sn_of_device "
                     + "and b.imei_esn_meid = '" + rs1.getString("IMEIESNMEID").substring(0, 14) + "' "
-                    //                    + " and a.imei_esn_meid  not in(select imei_esn_meid  from device_lawful_db ) "  
+                    //                    + " and a.imei_esn_meid  not in(select imei_esn_meid  from device_lawful_db ) "
                     + " and a.imei_esn_meid != '" + rs1.getString("IMEIESNMEID").substring(0, 14) + "'  union  "
                     + "select a.imei_esn_meid  , a.sn_of_device        from device_manufacturer_db  a , device_manufacturer_db  b  where a.sn_of_device = b.sn_of_device and"
                     + " b.imei_esn_meid = '" + rs1.getString("IMEIESNMEID").substring(0, 14) + "' "
-                    //                    + " and a.imei_esn_meid  not in(select imei_esn_meid  from device_lawful_db ) "  
+                    //                    + " and a.imei_esn_meid  not in(select imei_esn_meid  from device_lawful_db ) "
                     + " and a.imei_esn_meid != '" + rs1.getString("IMEIESNMEID").substring(0, 14) + "'  ";
 
             logger.info("insertFromImporterManufactor.. query is ::" + qry);
@@ -428,7 +430,7 @@ public class ConsignmentInsertUpdate {
                 my_query = "insert into " + feature_file_mapping.get("output_device_db")
                         + " (device_id_type,created_on,device_launch_date,device_status,"
                         + "device_type,imei_esn_meid,modified_on,multiple_sim_status,period,sn_of_device,txn_id,user_id  ,FEATURE_NAME , actual_imei ,tac ) "
-                        + "values(" + "'" + rs1.getString("DeviceIdType") + "'," + "" + dateFunction + "," /// "dd-MMM-YY"                              
+                        + "values(" + "'" + rs1.getString("DeviceIdType") + "'," + "" + dateFunction + "," /// "dd-MMM-YY"
                         + "'" + rs1.getString("Devicelaunchdate") + "', '" + stolnRcvryDetails.get("divceStatus") + "'  ,'" + rs1.getString("DeviceType") + "',"
                         + "'" + rs.getString("imei_esn_meid").substring(0, 14)
                         + "'," + "" + dateFunction + "," + "'" + rs1.getString("MultipleSIMStatus") + "'," + "'"
@@ -447,7 +449,7 @@ public class ConsignmentInsertUpdate {
 //                                 + stolnRcvryDetails.get("complaint_type") + "'  " + ")";
 //                    } else {
 //                         device_greylist_db_qry = "delete from greylist_db where imei  = '" + rs.getString("imei_esn_meid") + "' ";
-//   status on based on Block; pOA ;  Unblock :pOD 
+//   status on based on Block; pOA ;  Unblock :pOD
 //                         my_query = "    update    " + feature_file_mapping.get("output_device_db") + "  set device_status = '"+dvsStatus+"'  where imei_esn_meid  = '" + rs1.getString("IMEIESNMEID") + "'";
 //                         my_query = "    delete from    " + feature_file_mapping.get("output_device_db")
 //                                 + " where imei_esn_meid  = '" + rs.getString("imei_esn_meid") + "'";
@@ -490,9 +492,9 @@ public class ConsignmentInsertUpdate {
         } catch (Exception e) {
             new ErrorFileGenrator().gotoErrorFile(conn, txn_id, " Something went Wrong. Please Contact to Ceir Admin.  ");
             new CEIRFeatureFileFunctions().UpdateStatusViaApi(conn, txn_id, 1, feature_name);       //1 for reject
-            new CEIRFeatureFileFunctions().updateFeatureFileStatus(conn, txn_id, 5, feature_name, subFeature); // update web_action_db       
+            new WebActionDbDao().updateFeatureFileStatus(conn, txn_id, 5, feature_name, subFeature); // update web_action_db
             logger.error("Error.." + e);
-               System.exit(0);
+            System.exit(0);
         }
 
     }

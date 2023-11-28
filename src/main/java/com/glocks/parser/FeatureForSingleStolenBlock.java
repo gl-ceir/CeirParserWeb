@@ -5,6 +5,7 @@
  */
 package com.glocks.parser;
 
+import com.glocks.dao.WebActionDbDao;
 import com.glocks.util.Util;
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -18,7 +19,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -28,13 +28,15 @@ import org.apache.logging.log4j.Logger;
  */
 public class FeatureForSingleStolenBlock {
 
+//    @AutoWired
+//    WebActionDbDao webActionDbDao;
     Logger logger = LogManager.getLogger(FeatureForSingleStolenBlock.class);
 
     public void readFeatureWithoutFile(Connection conn, String feature, String txn_id, String sub_feature, String mgnt_table_db, String user_type) {
         Map<String, String> map = new HashMap<String, String>();
         try {
             logger.info("  readFeatureWithoutFile ");
-            new CEIRFeatureFileFunctions().updateFeatureFileStatus(conn, txn_id, 2, feature, sub_feature); // update web_action_db    
+            new WebActionDbDao().updateFeatureFileStatus(conn, txn_id, 2, feature, sub_feature); // update web_action_db
 
             map.put("feature", feature);
             map.put("sub_feature", sub_feature);
@@ -67,7 +69,7 @@ public class FeatureForSingleStolenBlock {
             logger.info("  Error  is  + " + e);
             new ErrorFileGenrator().gotoErrorFile(conn, txn_id, "  Something went Wrong. Please Contact to Ceir Admin.  ");
             new CEIRFeatureFileFunctions().UpdateStatusViaApi(conn, txn_id, 1, feature);       //1 for reject
-            new CEIRFeatureFileFunctions().updateFeatureFileStatus(conn, txn_id, 5, feature, sub_feature); // update web_action_db    
+            new WebActionDbDao().updateFeatureFileStatus(conn, txn_id, 5, feature, sub_feature); // update web_action_db
         } finally {
             try {
                 conn.commit();
@@ -316,8 +318,8 @@ public class FeatureForSingleStolenBlock {
 //                }
 
                 if (i == 1) {
-                    if ( (map.get("contact_number") == null  || map.get("contact_number").equals("")   ) &&   (  map.get("imei_esn_meid") == null   || map.get("imei_esn_meid").equals("")    )  ){            //      //msisdn is 
-                        logger.info(" neither msisdn nor imei "); 
+                    if ((map.get("contact_number") == null || map.get("contact_number").equals("")) && (map.get("imei_esn_meid") == null || map.get("imei_esn_meid").equals(""))) {            //      //msisdn is
+                        logger.info(" neither msisdn nor imei ");
                         ErrorFileGenrator errFile = new ErrorFileGenrator();
                         errFile.gotoErrorFile(conn, txn_id, "Error Code :CON_RULE_0027, Error Description :  Neither IMEI/ESN/MEID nor Msisdn is provided for  " + (map.get("request_type").equals("1") ? "Recovery" : "Unblocking") + " ");
                         failPasstatusUpdator(conn, map, 1);  // reject
@@ -364,7 +366,7 @@ public class FeatureForSingleStolenBlock {
 //                    f ailPasstatusUpdator(conn, map, 0);
                 }
 //                else {
-//                    return;  //  
+//                    return;  //
 //                }
 
                 for (int i = 2; i <= 4; i++) {
@@ -381,7 +383,7 @@ public class FeatureForSingleStolenBlock {
                         if (imei != null) {
                             insertinRawtable(conn, map);
                             map.put("failPassUpdator", "PASS");
-//                            f ailPasstatusUpdator(conn, map, 0); 
+//                            f ailPasstatusUpdator(conn, map, 0);
                         }
                     }
                 }
@@ -581,7 +583,7 @@ public class FeatureForSingleStolenBlock {
         CEIRFeatureFileFunctions ceirfunction = new CEIRFeatureFileFunctions();
         logger.info("main_type Is:" + feature + ",  management_table:" + management_table);
 
-        ceirfunction.updateFeatureFileStatus(conn, txn_id, (stats == 1 ? 4 : 2), feature, subfeature); // update web_action_db 
+        new WebActionDbDao().updateFeatureFileStatus(conn, txn_id, (stats == 1 ? 4 : 2), feature, subfeature); // update web_action_db
         if (stats == 1) {
             ceirfunction.UpdateStatusViaApi(conn, txn_id, stats, feature);
         }
