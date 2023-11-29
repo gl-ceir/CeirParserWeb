@@ -1176,7 +1176,7 @@ public class CsvFileReader {
         Date currentDate = new Date();
         Date graceDate = null;
         try {
-            query = "select value from system_configuration_db where tag='GRACE_PERIOD_END_DATE'";
+            query = "select value from sys_param where tag='GRACE_PERIOD_END_DATE'";
             logger.info("Query is " + query);
             stmt = conn.createStatement();
             rs1 = stmt.executeQuery(query);
@@ -1984,7 +1984,7 @@ public class CsvFileReader {
 //        ErrorFileGenrator errFile = new ErrorFileGenrator();
 //        String imei = "";
 //        String txn_id = map.get("txn_id");
-//        String lawful_stolen_usage_db_num_days_qury = " select value from  system_configuration_db  where tag  = 'lawful_stolen_usage_db_num_days'";
+//        String lawful_stolen_usage_db_num_days_qury = " select value from  sys_param 'lawful_stolen_usage_db_num_days'";
 //        logger.info(" getImeiMsisdn ,,,lawful_stolen_usage_db_num_days_qury,,, " + lawful_stolen_usage_db_num_days_qury);
 //        Statement stmt8 = conn.createStatement();
 //        ResultSet resultDay = stmt8.executeQuery(lawful_stolen_usage_db_num_days_qury);

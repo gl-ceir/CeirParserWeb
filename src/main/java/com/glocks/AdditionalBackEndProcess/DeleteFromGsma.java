@@ -49,8 +49,8 @@
 //
 //    private static void deleteProcess(Connection conn) {
 //        Statement stmt = null;
-////          String raw_query = "delete  from black_list   where CREATED_ON <  ( current_timestamp  - ( select value  from system_configuration_db where tag = 'GSMA_BL_MAX_RETENTION_PERIOD_DAYS_IN_DB'  )   ) ";
-//        String raw_query = "delete  from gsma_invalid_tac_db   where CREATED_ON <  ( current_timestamp  - ( select value  from system_configuration_db where tag = 'GSMA_TAC_MAX_RETENTION_PERIOD_DAYS_IN_DB'  )   ) ";
+////          String raw_query = "delete  from black_list   where CREATED_ON <  ( current_timestamp  - ( select value  from sys_param where tag = 'GSMA_BL_MAX_RETENTION_PERIOD_DAYS_IN_DB'  )   ) ";
+//        String raw_query = "delete  from gsma_invalid_tac_db   where CREATED_ON <  ( current_timestamp  - ( select value  from sys_param where tag = 'GSMA_TAC_MAX_RETENTION_PERIOD_DAYS_IN_DB'  )   ) ";
 //        try {
 //            logger.info(" " + raw_query);
 //            stmt = conn.createStatement();

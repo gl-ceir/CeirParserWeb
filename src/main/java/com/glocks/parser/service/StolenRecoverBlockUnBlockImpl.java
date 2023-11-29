@@ -138,7 +138,7 @@ public class StolenRecoverBlockUnBlockImpl {
             }
             logger.info("BLOCKING_TYPE " + BLOCKING_TYPE);
             if (BLOCKING_TYPE.equalsIgnoreCase("default")) {
-//                rs = stmt.executeQuery("select value from system_configuration_db where tag = ''   ");
+//                rs = stmt.executeQuery("select value from sys_param where tag = ''   ");
 //                while (rs.next()) {
 //                    defaultDays = rs.getString("value");
 //                }

@@ -4,16 +4,13 @@
  */
 package com.glocks.dao;
 
+import static com.glocks.parser.MainController.appdbName;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-/**
- *
- * @author sachin
- */
 public class WebActionDbDao {
 
     private static final Logger logger = LogManager.getLogger(WebActionDbDao.class);
@@ -22,7 +19,7 @@ public class WebActionDbDao {
     public void updateFeatureFileStatus(Connection conn, String txn_id, int status, String feature, String subfeature) {
         Statement stmt = null;
         try {
-            String query = "update web_action_db set state=" + status + "  where    txn_id='" + txn_id + "' and feature='" + feature
+            String query = "update  "+appdbName+".web_action_db set state=" + status + "  where    txn_id='" + txn_id + "' and feature='" + feature
                     + "' and sub_feature='" + subfeature + "' ";
             stmt = conn.createStatement();
             stmt.executeUpdate(query);
@@ -58,7 +55,7 @@ public class WebActionDbDao {
             stater = "  ( state  = 2   or  state  = 3 ) ";
         }
         try {                               //where state =  " + state + "
-            query = "select * from web_action_db where " + stater + featureStmt + " and retry_count < 20  order by state desc , id asc " + limiter + "  ";
+            query = "select * from "+appdbName+".web_action_db where " + stater + featureStmt + " and retry_count < 20  order by state desc , id asc " + limiter + "  ";
             logger.info("Query to get File Details [" + query + "]");
             stmt = conn.createStatement();
             return rs = stmt.executeQuery(query);

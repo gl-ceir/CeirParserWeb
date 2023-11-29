@@ -35,7 +35,7 @@ public class ErrorFileGenrator {
         try {
             logger.info("Error File init");
 //            Statement stmt = conn.createStatement();
-//            String qury = "select value from  system_configuration_db  where tag  = 'system_error_filepath' ";
+//            String qury = "select value from  sys_param  where tag  = 'system_error_filepath' ";
 //            ResultSet resultmsdn = null;
 //            resultmsdn = stmt.executeQuery(qury);
 //            String errorPath = null;

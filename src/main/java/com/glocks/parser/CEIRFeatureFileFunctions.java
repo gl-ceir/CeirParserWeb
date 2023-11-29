@@ -3,6 +3,7 @@ package com.glocks.parser;
 import com.gl.Rule_engine_Old.RuleEngineApplication;
 import com.glocks.constants.PropertyReader;
 import com.glocks.dao.SysConfigurationDao;
+import static com.glocks.parser.MainController.appdbName;
 import com.glocks.parser.service.ConsignmentInsertUpdate;
 import com.glocks.parser.service.StolenRecoverBlockUnBlockImpl;
 import com.glocks.util.Util;
@@ -220,7 +221,7 @@ public class CEIRFeatureFileFunctions {
                     + "\"userId\":" + userId + ",\n" + "\"userType\": \"CEIRSYSTEM\"\n" + "}  ";
         }
 
-        String query = "select value from system_configuration_db where tag='" + apiURI + "'";
+        String query = "select value from "+appdbName+".sys_param where tag='" + apiURI + "'";
         try {
             logger.info("Query is " + query);
             logger.info("............   " + responseBody + " ");

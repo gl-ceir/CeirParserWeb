@@ -1,7 +1,9 @@
 package com.glocks.parser;
 
+import com.glocks.constants.PropertyReader;
 import com.glocks.dao.SysConfigurationDao;
 import com.glocks.dao.WebActionDbDao;
+import com.glocks.db.ConnectionConfiguration;
 import com.glocks.parser.service.ConsignmentInsertUpdate;
 import com.glocks.parser.service.StolenRecoverBlockUnBlockImpl;
 import java.io.File;
@@ -17,18 +19,38 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 
-public class FeatureInitiliseController {
+public class MainController {
 
     @Autowired
     StolenRecoverBlockUnBlockImpl stolenRecoverBlockUnBlockImpl;
 
-    private static final Logger logger = LogManager.getLogger(FeatureInitiliseController.class);
+    private static final Logger logger = LogManager.getLogger(MainController.class);
     static StackTraceElement l = new Exception().getStackTrace()[0];
-
+   public  static String appdbName = null;
+    static String auddbName = null;
+    static String repdbName = null;
+    static String serverName = null;
+    static String dateFunction = null;
+    public static PropertyReader propertyReader = null;
+    static ConnectionConfiguration connectionConfiguration = null;
+    static Connection conn = null;
+    
+    
     public void loader(ApplicationContext applicationContext) {
+        
+        propertyReader = (PropertyReader) applicationContext.getBean("propertyReader");
+        connectionConfiguration = (ConnectionConfiguration) applicationContext.getBean("connectionConfiguration");
+        logger.info("connectionConfiguration :" + connectionConfiguration.getConnection().toString());
+        //  conn = (Connection) new com.glocks.db.MySQLConnection().getConnection();
+        conn = connectionConfiguration.getConnection();
+        appdbName = propertyReader.appdbName;
+        auddbName = propertyReader.auddbName;
+        repdbName = propertyReader.repdbName;
+        
+        
 
-        logger.info(" FeatureInitiliseController.class");
-        Connection conn = new com.glocks.db.MySQLConnection().getConnection();
+        logger.info(" MainController");
+      //  Connection conn = new com.glocks.db.MySQLConnection().getConnection();
         String basePath = "";
         String complete_file_path = "";
         String[] rawDataResult = null;

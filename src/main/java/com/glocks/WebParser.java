@@ -4,7 +4,7 @@
  */
 package com.glocks;
 
-import com.glocks.parser.FeatureInitiliseController;
+import com.glocks.parser.MainController;
 import com.ulisesbocchio.jasyptspringboot.annotation.EnableEncryptableProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -25,7 +25,7 @@ public class WebParser {
 
     public static void main(String[] args) {
         ApplicationContext context = SpringApplication.run(WebParser.class, args);
-        FeatureInitiliseController mainController = (FeatureInitiliseController) context.getBean("featureInitiliseController");
+        MainController mainController = (MainController) context.getBean("featureInitiliseController");
         mainController.loader(context);
         context = null;
 

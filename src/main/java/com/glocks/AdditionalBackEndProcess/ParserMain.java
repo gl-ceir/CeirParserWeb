@@ -73,7 +73,7 @@
 //        ResultSet rs = null;
 //        File fldr = null;
 //        try {
-//            query = "select value from system_configuration_db where tag= '" + opertor + "_folder_list'  ";
+//            query = "select value from sys_param where tag= '" + opertor + "_folder_list'  ";
 //            logger.debug("query: " + query);
 //            stmt = conn.createStatement();
 //            rs = stmt.executeQuery(query);

@@ -1,5 +1,8 @@
 package com.glocks.dao;
 
+import static com.glocks.parser.MainController.appdbName;
+import com.glocks.pojo.ManagementDb;
+import com.glocks.util.Util;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -8,12 +11,8 @@ import java.sql.Statement;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-import com.glocks.pojo.ManagementDb;
-import com.glocks.util.Util;
 
 public class ManagementTableDao {
 
@@ -30,8 +29,7 @@ public class ManagementTableDao {
                query = "select id, created_on, modified_on, device_type, device_id_type, "
                        + "multiple_sim_status, sn_of_device, imei_esn_meid, DEVICE_LAUNCH_DATE as launch_date, "
                        + "device_status, user_id, txn_id, period, feature_name "
-                       + "from "
-                       + managementTable
+                       + "from   "+appdbName+"." +  managementTable
                        + " where txn_id='" + txnId + "'";
 
                logger.info("Query [" + query + "]");
@@ -73,7 +71,7 @@ public class ManagementTableDao {
           ResultSet rs = null;
           try {
                stmt = conn.createStatement();
-               String qry = "select imei_esn_meid from " + managementTable + " where txn_id  = '" + txnId + "' ";
+               String qry = "select imei_esn_meid from "+appdbName+"." + managementTable + " where txn_id  = '" + txnId + "' ";
                logger.info("" + qry);
                rs = stmt.executeQuery(qry);
                while (rs.next()) {
@@ -106,7 +104,7 @@ public class ManagementTableDao {
           boolean isOracle = conn.toString().contains("oracle");
           String dateFunction = Util.defaultDate(isOracle);
 
-          String query = "update " + tableName + " set delete_flag=? where txn_id=?";
+          String query = "update "+appdbName+"." + tableName + " set delete_flag=? where txn_id=?";
           logger.info("Query [" + query + " ]");
           // System.out.println("Query [" + query + " ]");
 

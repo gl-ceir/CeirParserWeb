@@ -405,7 +405,7 @@ public class FeatureForSingleStolenBlock {
         ErrorFileGenrator errFile = new ErrorFileGenrator();
         String imei = null;
         String txn_id = map.get("txn_id");
-        String lawful_stolen_usage_db_num_days_qury = " select value from  system_configuration_db  where tag  = 'lawful_stolen_usage_db_num_days'";
+        String lawful_stolen_usage_db_num_days_qury = " select value from  sys_param  where tag  = 'lawful_stolen_usage_db_num_days'";
         logger.info(" getImeiMsisdn ,,,lawful_stolen_usage_db_num_days_qury,,, " + lawful_stolen_usage_db_num_days_qury);
         Statement stmt8 = conn.createStatement();
         ResultSet resultDay = stmt8.executeQuery(lawful_stolen_usage_db_num_days_qury);
