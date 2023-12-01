@@ -29,6 +29,10 @@ import java.util.Objects;
 import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import static com.glocks.parser.MainController.appdbName;
+
+
+
 
 public class CsvFileReader {
 
@@ -64,7 +68,7 @@ public class CsvFileReader {
         PreparedStatement ps = null;
         ResultSet rs = null;
         try {
-            query = "insert into " + repName + "(";
+            query = "insert into "+appdbName+"." + repName + "(";
             for (String field : fields) {
                 query = query + field + ",";
                 values = values + "?,";
@@ -364,10 +368,10 @@ public class CsvFileReader {
             sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 //             String[] fileArray = fileName.split("_");
             Statement st5 = conn.createStatement();
-            String qry = " select quantity, device_quantity from  " + main_type.trim().toLowerCase() + "_mgmt where txn_id  = '" + txn_id + "'";
+            String qry = " select quantity, device_quantity from  "+appdbName+"." + main_type.trim().toLowerCase() + "_mgmt where txn_id  = '" + txn_id + "'";
             if (main_type.equalsIgnoreCase("Stolen") || main_type.equalsIgnoreCase("Recovery")
                     || main_type.equalsIgnoreCase("Block") || main_type.equalsIgnoreCase("Unblock")) {
-                qry = "  select  quantity, device_quantity from stolenand_recovery_mgmt  where txn_id  = '" + txn_id + "'  ";
+                qry = "  select  quantity, device_quantity from "+appdbName+".stolenand_recovery_mgmt  where txn_id  = '" + txn_id + "'  ";
             }
             new FeatureForSingleStolenBlock().deleteFromRawTable(conn, txn_id, main_type);
             ResultSet resul5 = st5.executeQuery(qry);
@@ -387,7 +391,7 @@ public class CsvFileReader {
             file = new File(filePath);
             fr = new FileReader(file);
             br = new BufferedReader(fr);
-            query = "insert into " + main_type + "_raw" + "( ";
+            query = "insert into "+appdbName+"." + main_type + "_raw" + "( ";
             int pass_my_batch = 0;
             int cnt = 0;
             int my_batch_count = 10;   //  raw_upload_set_no1 but tbl removed
@@ -396,7 +400,7 @@ public class CsvFileReader {
             List alst = new ArrayList();
             String errorString = " , ";
             Statement stmt2 = conn.createStatement();
-            ResultSet rsult = stmt2.executeQuery("select tag ,value from message_configuration_db");
+            ResultSet rsult = stmt2.executeQuery("select tag ,value from "+appdbName+".message_configuration_db");
             try {
                 while (rsult.next()) {
                     msgConfig.put(rsult.getString("tag"), rsult.getString("value"));
@@ -405,7 +409,7 @@ public class CsvFileReader {
                 logger.error("" + l.getClassName() + "/" + l.getMethodName() + ":" + l.getLineNumber() + e);
             }
             rsult.close();
-            String interpQury = " select interp from system_config_list_db where tag =  ";
+            String interpQury = " select interp from "+appdbName+".system_config_list_db where tag =  ";
 
             ResultSet result1 = stmt2.executeQuery(interpQury + " 'DEVICE_TYPE'");
             Set<String> deviceType = new HashSet<String>();
@@ -949,7 +953,7 @@ public class CsvFileReader {
              * **************Insert Query and prepared statement
              * start**************
              */
-            query = "insert into " + repName + "(";
+            query = "insert into "+appdbName+"." + repName + "(";
             for (String field : fields) {
                 query = query + field + ",";
                 values = values + "?,";
@@ -1114,7 +1118,7 @@ public class CsvFileReader {
         try {
             Statement stmto = conn.createStatement();
 
-            ResultSet rs0 = stmto.executeQuery("select count(*)  from static_rule_engine_mapping where feature='"
+            ResultSet rs0 = stmto.executeQuery("select count(*)  from "+appdbName+".static_rule_engine_mapping where feature='"
                     + feature + "' and   user_type =  '" + usertype_name + "'  order by id asc ");
             while (rs0.next()) {
                 rs0Count = rs0.getInt(1);
@@ -1134,7 +1138,7 @@ public class CsvFileReader {
         Statement stmt = null;
         ResultSet rs = null;
         try {
-            query = "select * from static_rule_engine_mapping where feature='" + feature + "'   " + qry + "   order by id asc    "; /// usertype
+            query = "select * from "+appdbName+".static_rule_engine_mapping where feature='" + feature + "'   " + qry + "   order by id asc    "; /// usertype
 
             stmt = conn.createStatement();
             rs = stmt.executeQuery(query);
@@ -1176,7 +1180,7 @@ public class CsvFileReader {
         Date currentDate = new Date();
         Date graceDate = null;
         try {
-            query = "select value from sys_param where tag='GRACE_PERIOD_END_DATE'";
+            query = "select value from "+appdbName+".sys_param where tag='GRACE_PERIOD_END_DATE'";
             logger.info("Query is " + query);
             stmt = conn.createStatement();
             rs1 = stmt.executeQuery(query);
@@ -1209,7 +1213,7 @@ public class CsvFileReader {
         ResultSet rs = null;
         Statement stmt = null;
         try {
-            query = "select Changed_date from " + repName + " where sno=(select MAX(sno) from " + repName + ")";
+            query = "select Changed_date from "+appdbName+"." + repName + " where sno=(select MAX(sno) from "+appdbName+"." + repName + ")";
             stmt = conn.createStatement();
             rs = stmt.executeQuery(query);
             while (rs.next()) {
@@ -1271,7 +1275,7 @@ public class CsvFileReader {
         ResultSet rs = null;
         Statement stmt = null;
         try {
-            query = "select value from sys_param where tag='" + tag_type + "'";
+            query = "select value from "+appdbName+".sys_param where tag='" + tag_type + "'";
             stmt = conn.createStatement();
             rs = stmt.executeQuery(query);
             logger.info("to get configuration" + query);
@@ -1340,7 +1344,7 @@ public class CsvFileReader {
         Statement stmt = null;
         ResultSet rs = null;
         try {
-            query = "SELECT round(sum((data_length + index_length) / 1024 / 1024 ), 4) `Size`  FROM information_schema.TABLES where table_name = '"
+            query = "SELECT round(sum((data_length + index_length) / 1024 / 1024 ), 4) `Size`  FROM "+appdbName+".information_schema.TABLES where table_name = '"
                     + tableName + "'";
             // conn = conn.getConnection();
             stmt = conn.createStatement();
@@ -1396,12 +1400,12 @@ public class CsvFileReader {
                     }
                     i++;
                 }
-                query = "select billID,answerTime from zte_billid_temp where sno >=" + eStartId + " and sno <="
+                query = "select billID,answerTime from "+appdbName+".zte_billid_temp where sno >=" + eStartId + " and sno <="
                         + eEndId;
                 logger.info("Query for getting all is :[" + query + "]");
                 stmt = conn.createStatement();
                 rs = stmt.executeQuery(query);
-                updateQuery = "update " + repName
+                updateQuery = "update "+appdbName+"." + repName
                         + " set AnswerTime=?,cdr_date=? where PartRecID='3' and BillID=? and sno >=" + startSno
                         + " and sno <=" + endSno;
                 // updateQuery = "update "+repName+" set AnswerTime=IF((select answerTime from
@@ -1462,7 +1466,7 @@ public class CsvFileReader {
         boolean result = false;
         try {
             result = new com.glocks.db.Query().insert(conn,
-                    "insert into zte_id_details(cdr_start_time,e_start_id,e_end_id) values('" + cdrStartTime + "',"
+                    "insert into "+appdbName+".zte_id_details(cdr_start_time,e_start_id,e_end_id) values('" + cdrStartTime + "',"
                     + eStartId + "," + eEndId + ")");
         } catch (Exception ex) {
             result = false;
@@ -1477,7 +1481,7 @@ public class CsvFileReader {
         Statement stmt = null;
         ResultSet rs = null;
         try {
-            query = "select e_start_id,e_end_id from zte_id_details where DATE_FORMAT(cdr_start_time,'%Y-%m-%d %H:%i:%s') <= DATE_SUB(FROM_UNIXTIME(FLOOR( UNIX_TIMESTAMP('"
+            query = "select e_start_id,e_end_id from "+appdbName+".zte_id_details where DATE_FORMAT(cdr_start_time,'%Y-%m-%d %H:%i:%s') <= DATE_SUB(FROM_UNIXTIME(FLOOR( UNIX_TIMESTAMP('"
                     + cdrStartTime
                     + "')/300 ) * 300),INTERVAL 15 MINUTE) AND DATE_FORMAT(cdr_start_time,'%Y-%m-%d %H:%i:%s') >= DATE_SUB(FROM_UNIXTIME(FLOOR( UNIX_TIMESTAMP('"
                     + cdrStartTime + "')/300 ) * 300),INTERVAL 2 HOUR)";
@@ -1513,7 +1517,7 @@ public class CsvFileReader {
         try {
             stmt = conn.createStatement();
             rs = stmt.executeQuery(
-                    "SELECT  sum(round(((data_length + index_length) / 1024 / 1024 ), 4))  as size FROM information_schema.TABLES  WHERE table_schema ='"
+                    "SELECT  sum(round(((data_length + index_length) / 1024 / 1024 ), 4))  as size FROM "+appdbName+".information_schema.TABLES  WHERE table_schema ='"
                     + dbName + "'");
             if (rs != null) {
                 while (rs.next()) {
@@ -1584,8 +1588,8 @@ public class CsvFileReader {
         Date currentDate = new Date();
         Date graceDate = null;
         try {
-            query = "select  usertype_name  from users inner join usertype on users.usertype_id  = usertype.id inner join "
-                    + main_type.trim().toLowerCase() + "_mgmt on user_id =  users.id where txn_id  = '" + txn_id + "'";
+            query = "select  usertype_name  from "+appdbName+".users inner join "+appdbName+".usertype on "+appdbName+".users.usertype_id  = "+appdbName+".usertype.id inner join "
+                    + main_type.trim().toLowerCase() + "_mgmt on user_id =  "+appdbName+".users.id where txn_id  = '" + txn_id + "'";
             logger.info("Query  (getUserTypeName) is " + query);
             stmt = conn.createStatement();
             rs1 = stmt.executeQuery(query);
@@ -1613,7 +1617,7 @@ public class CsvFileReader {
         Statement stmt = null;
 
         DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        String raw_query = "insert into cdr_file_details_db(created_on, file_name, operator, total_records_count, total_error_record_count,source   ,   P1StartTime ,P1EndTime    ) "
+        String raw_query = "insert into "+appdbName+".cdr_file_details_db(created_on, file_name, operator, total_records_count, total_error_record_count,source   ,   P1StartTime ,P1EndTime    ) "
                 + "  values(current_timestamp ,  '" + fileName + "', '" + repName + "', '" + total_records_count + "','" + total_error_record_count + "','" + sourc + "' , p1starttime,p1endTime  )";
         try {
             logger.info("  cdrFileDetailsInsert is " + raw_query);

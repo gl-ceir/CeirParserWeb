@@ -189,7 +189,7 @@ public class RuleFilter {
         HashMap<String, String> rule_details = new HashMap<String, String>();
         ResultSet rs = null;
         Statement stmt = null;
-        String query = "select * from rule_filter_java_api_db where rule_id='" + device_info.get("ruleid") + "'";
+        String query = "select * from "+appdbName+".rule_filter_java_api_db where rule_id='" + device_info.get("ruleid") + "'";
         // System.out.println("Java api Rule Query" + query);
         logger.info("Query for Java API Rule filter [" + query + "]");
         String output = "";
@@ -243,7 +243,7 @@ public class RuleFilter {
         String my_rule_query = "";
         HashMap<String, String> rule_details = new HashMap<String, String>();
 
-        String query = "select * from rule_filter_condition_db where rule_id='" + device_info.get("ruleid") + "'";
+        String query = "select * from "+appdbName+".rule_filter_condition_db where rule_id='" + device_info.get("ruleid") + "'";
         // System.out.println("Normal Check query" + query);
         logger.info("Query for DB Check Rule filter [" + query + "]");
 
@@ -252,7 +252,7 @@ public class RuleFilter {
             rs = stmt.executeQuery(query);
             while (rs.next()) {
 
-                my_rule_query = "select * from " + rs.getString("table_name") + " where ";
+                my_rule_query = "select * from "+appdbName+"." + rs.getString("table_name") + " where ";
                 String[] keys = rs.getString("param_key").split(",");
                 String[] condition = rs.getString("param_condition").split(",");
                 String[] values = rs.getString("param_value").split(",");
@@ -312,7 +312,7 @@ public class RuleFilter {
         //		Statement stmt3=null;
         HashMap<String, String> rule_details = new HashMap<String, String>();
 
-        String query = "select * from rule_filter_norm_check_db where rule_id='" + device_info.get("ruleid") + "'";
+        String query = "select * from "+appdbName+".rule_filter_norm_check_db where rule_id='" + device_info.get("ruleid") + "'";
         // System.out.println("In Norm Check Query" + query);
         logger.info("Query for Normal check query [" + query + "]");
         String my_rule_query = "";
@@ -392,7 +392,7 @@ public class RuleFilter {
         Statement stmt3 = null;
         try {
             if (action_type.equalsIgnoreCase("Insert")) {
-                String action_query = "select * from rule_filter_action_db where rule_id='" + device_info.get("ruleid") + "'";
+                String action_query = "select * from "+appdbName+".rule_filter_action_db where rule_id='" + device_info.get("ruleid") + "'";
                 stmt2 = conn.createStatement();
                 rs2 = stmt2.executeQuery(action_query);
                 logger.info("Rule filter action query [" + action_query + "]");
@@ -400,7 +400,7 @@ public class RuleFilter {
                 while (rs2.next()) {
                     String[] insert_keys = rs2.getString("param_key").split(",");
                     String[] insert_values = rs2.getString("param_value").split(",");
-                    String action_insert_query = "insert into " + rs2.getString("context_path") + " (";
+                    String action_insert_query = "insert into "+appdbName+"." + rs2.getString("context_path") + " (";
                     String values1 = " values(";
                     for (int j = 0; j < insert_keys.length; j++) {
                         // System.out.println(insert_keys[j] + " value " + insert_values[j]);
@@ -419,7 +419,7 @@ public class RuleFilter {
 
                 }
             } else if (action_type.equals("java_api")) {
-                String action_query = "select * from rule_filter_action_db where rule_id='" + device_info.get("ruleid") + "'";
+                String action_query = "select * from "+appdbName+".rule_filter_action_db where rule_id='" + device_info.get("ruleid") + "'";
                 // System.out.println("java api calling action " + action_query);
                 logger.info("Query to java_api in rule filter action [" + action_query + "]");
                 stmt2 = conn.createStatement();

@@ -21,6 +21,11 @@ import java.util.List;
 import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import static com.glocks.parser.MainController.appdbName;
+
+
+
+
 
 /**
  *
@@ -117,10 +122,10 @@ public class FeatureForSingleStolenBlock {
                     Statement stmt1 = conn.createStatement();
                     String qury1 = "";
                     if (map.get("request_type").equals("1")) {
-                        qury1 = " select " + stln_imei + " from stolen_individual_userdb  where stolen_id  =" + id
+                        qury1 = " select " + stln_imei + " from "+appdbName+".stolen_individual_userdb  where stolen_id  =" + id
                                 + " "; // , model_number, device_brand_name, contact_number
                     } else {
-                        qury1 = "select " + sing_imei + "  from single_imei_details where txn_id ='" + txn_id + "' ";
+                        qury1 = "select " + sing_imei + "  from "+appdbName+".single_imei_details where txn_id ='" + txn_id + "' ";
                     }
                     logger.info(" Query i... " + qury1);
                     ResultSet res = stmt1.executeQuery(qury1);
@@ -199,12 +204,12 @@ public class FeatureForSingleStolenBlock {
 
             String qury1 = "";
             if (map.get("request_type").equals("1")) {
-                qury1 = " select " + stln_imei + " from stolen_individual_userdb where stolen_id  =" + id + " "; // ,
+                qury1 = " select " + stln_imei + " from "+appdbName+".stolen_individual_userdb where stolen_id  =" + id + " "; // ,
                 // model_number,
                 // device_brand_name,
                 // contact_number
             } else {
-                qury1 = "select " + sing_imei + "  from single_imei_details where txn_id ='" + txn_id + "' ";
+                qury1 = "select " + sing_imei + "  from "+appdbName+".single_imei_details where txn_id ='" + txn_id + "' ";
             }
             logger.info(" chckOtherExistingImei quury  " + qury1);
 
@@ -237,7 +242,7 @@ public class FeatureForSingleStolenBlock {
             ResultSet resultmsdn = null;
             stmt = conn.createStatement();
 
-            String qury = " select  id,  request_type,  source_type ,file_name ,quantity, user_id from stolenand_recovery_mgmt where txn_id  = '"
+            String qury = " select  id,  request_type,  source_type ,file_name ,quantity, user_id from "+appdbName+".stolenand_recovery_mgmt where txn_id  = '"
                     + map.get("txn_id") + "'  ";
             logger.info("qury: +" + qury);
             resultmsdn = stmt.executeQuery(qury);
@@ -288,12 +293,12 @@ public class FeatureForSingleStolenBlock {
 
                 if (map.get("request_type").equals("2")) {
                     qury = "select " + sing_imei
-                            + "    as   imei_esn_meid , second_imei  as model_number,third_imei  as device_brand_name,  fourth_imei  as contact_number from single_imei_details where txn_id ='" + txn_id + "'   ";
+                            + "    as   imei_esn_meid , second_imei  as model_number,third_imei  as device_brand_name,  fourth_imei  as contact_number from "+appdbName+".single_imei_details where txn_id ='" + txn_id + "'   ";
                     ty = "BLOCK";
                 }
                 if (map.get("request_type").equals("0")) {
                     qury = " select " + stln_imei
-                            + "    as imei_esn_meid , model_number, device_brand_name, contact_number from stolen_individual_userdb where stolen_id  =" + id + " ";
+                            + "    as imei_esn_meid , model_number, device_brand_name, contact_number from "+appdbName+".stolen_individual_userdb where stolen_id  =" + id + " ";
                     ty = "STOLEN";
                 }
                 stmt = conn.createStatement();
@@ -405,7 +410,7 @@ public class FeatureForSingleStolenBlock {
         ErrorFileGenrator errFile = new ErrorFileGenrator();
         String imei = null;
         String txn_id = map.get("txn_id");
-        String lawful_stolen_usage_db_num_days_qury = " select value from  sys_param  where tag  = 'lawful_stolen_usage_db_num_days'";
+        String lawful_stolen_usage_db_num_days_qury = " select value from  "+appdbName+".sys_param  where tag  = 'lawful_stolen_usage_db_num_days'";
         logger.info(" getImeiMsisdn ,,,lawful_stolen_usage_db_num_days_qury,,, " + lawful_stolen_usage_db_num_days_qury);
         Statement stmt8 = conn.createStatement();
         ResultSet resultDay = stmt8.executeQuery(lawful_stolen_usage_db_num_days_qury);
@@ -429,7 +434,7 @@ public class FeatureForSingleStolenBlock {
         List lstGsma = new ArrayList();
         String msisdn = map.get("contact_number");
         String strTacs = "Result......";
-        String device_usage_db_qury = " select imei from  device_usage_db  where msisdn = '" + msisdn
+        String device_usage_db_qury = " select imei from  "+appdbName+".device_usage_db  where msisdn = '" + msisdn
                 + "'  and modified_on > '" + date + "' ";
         logger.info(" ImeiWithMsisdn ,,,device_usage_db,,, " + device_usage_db_qury);
         Statement stmt = conn.createStatement();
@@ -442,7 +447,7 @@ public class FeatureForSingleStolenBlock {
             logger.info("Error..getErrorMsisdn.." + e);
         }
         logger.info("List size ..." + lst.size());
-        String device_duplicate_db_qury = " select imei from  device_duplicate_db  where msisdn = '" + msisdn
+        String device_duplicate_db_qury = " select imei from  "+appdbName+".device_duplicate_db  where msisdn = '" + msisdn
                 + "'  and modified_on > '" + date + "' ";
         logger.info(" getImeiSMsisdn ,,,device_duplicate_db,,, " + device_duplicate_db_qury);
         ResultSet result2 = stmt.executeQuery(device_duplicate_db_qury);
@@ -477,7 +482,7 @@ public class FeatureForSingleStolenBlock {
                 int coustion = 0;
                 int resultsiz = 0;
                 for (int ind = 0; ind < lst.size(); ind++) {
-                    String gsma_tac_qury = " select    band_name , model_name  from  gsma_tac_db  where device_id = "
+                    String gsma_tac_qury = " select    band_name , model_name  from  "+appdbName+".gsma_tac_db  where device_id = "
                             + lst.get(ind).toString().substring(0, 8) + "  ";
                     logger.info(" Query ,,,,,, " + gsma_tac_qury);
                     ResultSet result3 = stmt.executeQuery(gsma_tac_qury);
@@ -544,18 +549,18 @@ public class FeatureForSingleStolenBlock {
 
         String dateFunction = Util.defaultNowDate();
         if (feature.equalsIgnoreCase("Stolen") || feature.equalsIgnoreCase("Recovery")) {
-            DeviceType = "( select interp from system_config_list_db where tag = 'DEVICE_TYPE' and value  =(select device_type from stolen_individual_userdb where stolen_id  =" + id + " ) )";
-            DeviceIdType = "( select interp from system_config_list_db where tag = 'DEVICE_ID_TYPE' and value  =( select device_id_type from stolen_individual_userdb where stolen_id  =" + id + " ))";
-            MultipleSIMStatus = " (select interp from system_config_list_db where tag = 'MULTI_SIM_STATUS' and value  = (select multi_sim_status  from stolen_individual_userdb where stolen_id  =" + id + " ) )";
-            DeviceSerial = " ( Select  device_serial_number from stolen_individual_userdb where stolen_id  =" + id + " ) ";
+            DeviceType = "( select interp from "+appdbName+".system_config_list_db where tag = 'DEVICE_TYPE' and value  =(select device_type from "+appdbName+".stolen_individual_userdb where stolen_id  =" + id + " ) )";
+            DeviceIdType = "( select interp from "+appdbName+".system_config_list_db where tag = 'DEVICE_ID_TYPE' and value  =( select device_id_type from "+appdbName+".stolen_individual_userdb where stolen_id  =" + id + " ))";
+            MultipleSIMStatus = " (select interp from "+appdbName+".system_config_list_db where tag = 'MULTI_SIM_STATUS' and value  = (select multi_sim_status  from "+appdbName+".stolen_individual_userdb where stolen_id  =" + id + " ) )";
+            DeviceSerial = " ( Select  device_serial_number from "+appdbName+".stolen_individual_userdb where stolen_id  =" + id + " ) ";
         } else {
-            DeviceType = "( select interp from system_config_list_db where tag = 'DEVICE_TYPE'  and value  =(select device_type  from single_imei_details where txn_id ='" + txn_id + "' )) ";
-            DeviceIdType = "( select interp from system_config_list_db where tag = 'DEVICE_ID_TYPE' and value  =(select device_id_type   from single_imei_details where txn_id ='" + txn_id + "') )";
-            MultipleSIMStatus = "  (select interp from system_config_list_db where tag = 'MULTI_SIM_STATUS' and value  =(select multiple_sim_status   from single_imei_details where txn_id ='" + txn_id + "') )";
-            DeviceSerial = " ( select  device_serial_number  from single_imei_details where txn_id ='" + txn_id + "' )";
+            DeviceType = "( select interp from "+appdbName+".system_config_list_db where tag = 'DEVICE_TYPE'  and value  =(select device_type  from "+appdbName+".single_imei_details where txn_id ='" + txn_id + "' )) ";
+            DeviceIdType = "( select interp from "+appdbName+".system_config_list_db where tag = 'DEVICE_ID_TYPE' and value  =(select device_id_type   from "+appdbName+".single_imei_details where txn_id ='" + txn_id + "') )";
+            MultipleSIMStatus = "  (select interp from "+appdbName+".system_config_list_db where tag = 'MULTI_SIM_STATUS' and value  =(select multiple_sim_status   from "+appdbName+".single_imei_details where txn_id ='" + txn_id + "') )";
+            DeviceSerial = " ( select  device_serial_number  from "+appdbName+".single_imei_details where txn_id ='" + txn_id + "' )";
         }
 
-        String query = "insert into  " + feature + "_raw"
+        String query = "insert into  "+appdbName+"." + feature + "_raw"
                 + "   (   DeviceType,DeviceIdType ,MultipleSIMStatus,SNofDevice,IMEIESNMEID,Devicelaunchdate,DeviceStatus,status,file_name , txn_id , time ,feature_type ,CREATED_ON , modified_on    )   values  "
                 + " (  " + DeviceType + "  , " + DeviceIdType + " ,  " + MultipleSIMStatus + " ,  " + DeviceSerial
                 + " ,  '" + imei_esn_meid + "' , '', '' , 'Init' ,  'NA' , '" + txn_id + "' ,  '" + dateNow + "'  , '"
@@ -595,7 +600,7 @@ public class FeatureForSingleStolenBlock {
         String cntctNo = null;
 
         ResultSet resultmsdn = null;
-        String qury = " select contact_number" + i + "  as  cantctNo from stolen_individual_userdb where stolen_id  = '" + map.get("id") + "'    ";
+        String qury = " select contact_number" + i + "  as  cantctNo from "+appdbName+".stolen_individual_userdb where stolen_id  = '" + map.get("id") + "'    ";
         logger.info("getOtherContactsImei qury :" + qury);
         try {
             Statement stmt = conn.createStatement();
@@ -617,7 +622,7 @@ public class FeatureForSingleStolenBlock {
     }
 
     public void deleteFromRawTable(Connection conn, String txn_id, String feature) {
-        String query = "delete from " + feature + "_raw where txn_id ='" + txn_id + "'";
+        String query = "delete from "+appdbName+"." + feature + "_raw where txn_id ='" + txn_id + "'";
         logger.info(query);
         Statement st5 = null;
         try {

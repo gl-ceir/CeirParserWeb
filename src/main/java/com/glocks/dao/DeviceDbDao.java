@@ -1,5 +1,7 @@
 package com.glocks.dao;
 
+import static com.glocks.parser.MainController.appdbName;
+
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -26,7 +28,7 @@ public class DeviceDbDao {
                query = "select id, created_on, modified_on, device_type, device_id_type, "
                        + "multiple_sim_status, sn_of_device, imei_esn_meid, DEVICE_LAUNCH_DATE as launch_date, "
                        + "device_status, tac, period, txn_id, state, feature_name "
-                       + "from device_db "
+                       + "from "+appdbName+".device_db "
                        + "where txn_id='" + txnId + "'";
 
                // System.out.println("Select Query on device_db ["+query+"]");
@@ -68,10 +70,10 @@ public class DeviceDbDao {
                int counter = new com.glocks.parser.service.ConsignmentInsertUpdate().getCounterFromDeviceDb(conn, imei);
                logger.debug("imei  " + imei + " ; C0unter  is" + counter);
                if (counter <= 1) {
-                    query = "delete from device_db where  imei_esn_meid = '" + imei + "'";
+                    query = "delete from "+appdbName+".device_db where  imei_esn_meid = '" + imei + "'";
                }
                if (counter > 1) {
-                    query = "update  device_db set counter = " + (counter - 1) + " where imei_esn_meid = '" + imei + "' ";
+                    query = "update  "+appdbName+".device_db set counter = " + (counter - 1) + " where imei_esn_meid = '" + imei + "' ";
                }
                logger.info(" " + query);
                try {

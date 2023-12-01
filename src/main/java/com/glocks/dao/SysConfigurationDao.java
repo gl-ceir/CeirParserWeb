@@ -4,6 +4,8 @@
  */
 package com.glocks.dao;
 
+import static com.glocks.parser.MainController.appdbName;
+
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
@@ -24,7 +26,7 @@ public class SysConfigurationDao {
         ResultSet rs = null;
         Statement stmt = null;
         try {
-            query = "select value from sys_param where tag='" + tag_type + "'";
+            query = "select value from "+appdbName+".sys_param where tag='" + tag_type + "'";
             stmt = conn.createStatement();
             rs = stmt.executeQuery(query);
             logger.info("to get configuration" + query);

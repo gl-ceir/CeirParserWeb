@@ -82,7 +82,7 @@ public class ManagementTableDao {
                logger.error(e);
           }
 
-          query = "delete from " + managementTable + " where txn_id='" + txnId + "'";
+          query = "delete from "+appdbName+"." + managementTable + " where txn_id='" + txnId + "'";
           logger.info("Query [" + query + "]");
           try {
                stmt = conn.createStatement();

@@ -69,7 +69,7 @@ public class WebActionDbDao {
 //    public void updateFeatureFileStatus(Connection conn, String txn_id, int status, String feature, String subfeature) {
 //        Statement stmt = null;
 //        try {
-//            String query = "update web_action_db set state=" + status + "  where    txn_id='" + txn_id + "' and feature='" + feature
+//            String query = "update "+appdbName+".web_action_db set state=" + status + "  where    txn_id='" + txn_id + "' and feature='" + feature
 //                    + "' and sub_feature='" + subfeature + "' ";
 //            stmt = conn.createStatement();
 //            stmt.executeUpdate(query);

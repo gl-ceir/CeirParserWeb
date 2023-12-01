@@ -9,6 +9,10 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import static com.glocks.parser.MainController.appdbName;
+
+
+
 
 /**
  *
@@ -20,7 +24,7 @@ public class BrandModelDbDao {
 
     public void updateModelBrandNameByTxnId(Connection conn, String txnId, String TableName) {
 
-        String query = " select tac from  " + TableName + " where  txn_id =   '" + txnId + "'   ";
+        String query = " select tac from  "+appdbName+"." + TableName + " where  txn_id =   '" + txnId + "'   ";
         Statement stmt = null;
         Statement stmt2 = null;
         logger.info("tac       ...[" + query + "]");
@@ -30,8 +34,8 @@ public class BrandModelDbDao {
             stmt2 = conn.createStatement();
             rs = stmt.executeQuery(query);
             while (rs.next()) {
-                String updtQry = " update  " + TableName + " set model_name = (select  MODEL_NAME_NEW  from gsma_tac_db where device_id = '" + rs.getString("tac") + "'  ) "
-                        + " ,   brand_name = ( select BRAND_NAME_NEW  from gsma_tac_db where device_id = '" + rs.getString("tac") + "' )    where tac =   '" + rs.getString("tac") + "'  ";
+                String updtQry = " update  "+appdbName+"." + TableName + " set model_name = (select  MODEL_NAME_NEW  from "+appdbName+".gsma_tac_db where device_id = '" + rs.getString("tac") + "'  ) "
+                        + " ,   brand_name = ( select BRAND_NAME_NEW  from "+appdbName+".gsma_tac_db where device_id = '" + rs.getString("tac") + "' )    where tac =   '" + rs.getString("tac") + "'  ";
                 logger.info(updtQry);
                 stmt2.executeUpdate(updtQry);
             }

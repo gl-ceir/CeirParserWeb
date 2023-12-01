@@ -1,5 +1,7 @@
 package com.glocks.dao;
 
+import static com.glocks.parser.MainController.appdbName;
+
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -16,7 +18,7 @@ public class SourceTacInactiveInfoDao {
         Statement stmt = null;
         int executeStatus = 0;
 
-        query = "delete from source_tac_inactive_info where txn_id='" + txnId + "'";
+        query = "delete from "+appdbName+".source_tac_inactive_info where txn_id='" + txnId + "'";
         logger.info("delete source_tac_inactive_info [" + query + "]");
         // System.out.println("delete device_importer_db ["+query+"]");
 
@@ -38,7 +40,7 @@ public class SourceTacInactiveInfoDao {
     public void insertSourceTac(Connection conn, String tac, String txnFile, Long tacCount, String dbName) {
         Statement stmt = null;
         logger.info("tacCount " + tacCount);
-        String raw_query = "insert into " + dbName + "(tac , TXN_ID, RECORD_COUNT   ) "
+        String raw_query = "insert into "+appdbName+"." + dbName + "(tac , TXN_ID, RECORD_COUNT   ) "
                 + "  values('" + tac + "', '" + txnFile + "', " + tacCount + " )";
         try {
             logger.info(" " + raw_query);

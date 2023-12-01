@@ -44,7 +44,7 @@ public class CEIRFeatureFileFunctions {
         }
 
         try {
-            query = "select * from feature_mapping_db where  feature='" + feature + "'  " + addQuery + "    " + limiter
+            query = "select * from "+appdbName+".feature_mapping_db where  feature='" + feature + "'  " + addQuery + "    " + limiter
                     + "   ";
             logger.info("Query  File Details [" + query + "]");
 
@@ -79,7 +79,7 @@ public class CEIRFeatureFileFunctions {
         ResultSet rs = null;
         String query = null;
         try {
-            query = "select * from " + management_db + " where  txn_id='" + txn_id + "'";
+            query = "select * from "+appdbName+"." + management_db + " where  txn_id='" + txn_id + "'";
             logger.info("Query to (getFeatureFileManagement) File Details [" + query + "]");
             stmt = conn.createStatement();
             rs = stmt.executeQuery(query);
@@ -111,7 +111,7 @@ public class CEIRFeatureFileFunctions {
         if (table_name.equalsIgnoreCase("stolenand_recovery_mgmt")) {
             main_type = "file";
         }
-        query = "update " + table_name + " set   " + main_type.trim().toLowerCase() + "_status=" + status
+        query = "update "+appdbName+"." + table_name + " set   " + main_type.trim().toLowerCase() + "_status=" + status
                 + " where txn_id='" + txn_id + "'";
         logger.info("update  " + main_type.toLowerCase() + "_status db..[" + query + "]");
         try {
@@ -138,10 +138,10 @@ public class CEIRFeatureFileFunctions {
         Statement stmt = null;
         ResultSet rs = null;
 
-        query = "select b.usertype_name as usertype_name from users a, usertype b where a.usertype_id=b.id and a.id='" + user_id + "'";
+        query = "select b.usertype_name as usertype_name from "+appdbName+".users a, "+appdbName+".usertype b where a.usertype_id=b.id and a.id='" + user_id + "'";
 
         if (main_type.toLowerCase().equals("stock")) {
-            query = "select  role_type  as usertype_name from stock_mgmt  where txn_id = '" + txn_id + "'"; // hardcodeed
+            query = "select  role_type  as usertype_name from "+appdbName+".stock_mgmt  where txn_id = '" + txn_id + "'"; // hardcodeed
         }
         logger.info(" Query at (getUserType)  for " + main_type + ":::" + query);
         try {
@@ -299,7 +299,7 @@ public class CEIRFeatureFileFunctions {
     public void updateFeatureManagementDeleteStatus(Connection conn, String txn_id, int status, String table_name) {
         String query = "";
         Statement stmt = null;
-        query = "update " + table_name + " set delete_status =" + status + " where txn_id='" + txn_id + "'";
+        query = "update "+appdbName+"." + table_name + " set delete_status =" + status + " where txn_id='" + txn_id + "'";
         logger.info("update delete status [" + query + "]");
         // System.out.println("update delete status [" + query + "]");
         try {
@@ -325,7 +325,7 @@ public class CEIRFeatureFileFunctions {
         HashMap<String, String> map = new HashMap<String, String>();
 
         try {
-            query = "select role_type , user_type  from stock_mgmt where  txn_id = '" + txn_id + "'   ";
+            query = "select role_type , user_type  from "+appdbName+".stock_mgmt where  txn_id = '" + txn_id + "'   ";
             logger.info("Query to get getUserRoleType [" + query + "]");
             stmt = conn.createStatement();
             rs = stmt.executeQuery(query);
@@ -365,7 +365,7 @@ public class CEIRFeatureFileFunctions {
                 if (i == 4) {
                     ValImei = "fourth_imei";
                 }
-                query = "select * from regularize_device_db where  txn_id = '" + txn_id + "' and  " + ValImei + " is not null   ";
+                query = "select * from "+appdbName+".regularize_device_db where  txn_id = '" + txn_id + "' and  " + ValImei + " is not null   ";
                 logger.info(" / " + query);
                 // 0 tax paid , 1 - not tax Paid, 2 : regulized   , 3  ????
                 stmt = conn.createStatement();
@@ -374,17 +374,17 @@ public class CEIRFeatureFileFunctions {
                 int dvcDbCounter = 0;
                 try {
                     while (rs.next()) {
-                        InsrtQry = "insert  into device_custom_db( CREATED_ON , modified_on , DEVICE_ID_TYPE, DEVICE_STATUS,DEVICE_TYPE,IMEI_ESN_MEID,MULTIPLE_SIM_STATUS,FEATURE_NAME ,TXN_ID,user_id , period , actual_imei) "
+                        InsrtQry = "insert  into "+appdbName+".device_custom_db( CREATED_ON , modified_on , DEVICE_ID_TYPE, DEVICE_STATUS,DEVICE_TYPE,IMEI_ESN_MEID,MULTIPLE_SIM_STATUS,FEATURE_NAME ,TXN_ID,user_id , period , actual_imei) "
                                 + "values (" + dateFunction + " , " + dateFunction + " ,  '" + rs.getString("DEVICE_ID_TYPE") + "' , '" + rs.getString("DEVICE_STATUS") + "', '" + ((rs.getString("DEVICE_TYPE") == null || rs.getString("DEVICE_TYPE").equals("")) ? "NA" : rs.getString("DEVICE_TYPE")) + "'  , '" + rs.getString("" + ValImei + "").substring(0, 14) + "' , '" + rs.getString("MULTI_SIM_STATUS") + "' , 'Register Device' , '" + rs.getString("TXN_ID") + "','" + rs.getString("TAX_COLLECTED_BY") + "' , '" + period + "'   , '" + rs.getString("" + ValImei + "") + "'   )";
                         logger.info(" insert qury  [" + InsrtQry + "]");
                         stmt1.executeUpdate(InsrtQry);
 
                         dvcDbCounter = new ConsignmentInsertUpdate().getCounterFromDeviceDb(conn, rs.getString("" + ValImei + "").substring(0, 14));
                         if (dvcDbCounter == 0) {
-                            device_db_query = "insert  into device_db( counter ,  CREATED_ON , modified_on , DEVICE_ID_TYPE, DEVICE_STATUS,DEVICE_TYPE,IMEI_ESN_MEID,MULTIPLE_SIM_STATUS,FEATURE_NAME ,TXN_ID,period ,actual_imei ) "
+                            device_db_query = "insert  into "+appdbName+".device_db( counter ,  CREATED_ON , modified_on , DEVICE_ID_TYPE, DEVICE_STATUS,DEVICE_TYPE,IMEI_ESN_MEID,MULTIPLE_SIM_STATUS,FEATURE_NAME ,TXN_ID,period ,actual_imei ) "
                                     + "values (  1 , " + dateFunction + " , " + dateFunction + " ,  '" + rs.getString("DEVICE_ID_TYPE") + "' , '" + rs.getString("DEVICE_STATUS") + "', '" + ((rs.getString("DEVICE_TYPE") == null || rs.getString("DEVICE_TYPE").equals("")) ? "NA" : rs.getString("DEVICE_TYPE")) + "' , '" + rs.getString("" + ValImei + "").substring(0, 14) + "' , '" + rs.getString("MULTI_SIM_STATUS") + "' , 'Register Device' , '" + rs.getString("TXN_ID") + "', '" + period + "'  , '" + rs.getString("" + ValImei + "") + "'     )";
                         } else {
-                            device_db_query = "update  device_db set counter = " + (dvcDbCounter + 1) + " where imei_esn_meid =   '" + rs.getString("" + ValImei + "").substring(0, 14) + "'   ";
+                            device_db_query = "update  "+appdbName+".device_db set counter = " + (dvcDbCounter + 1) + " where imei_esn_meid =   '" + rs.getString("" + ValImei + "").substring(0, 14) + "'   ";
                         }
                         logger.info(" insert device_db_query  [" + device_db_query + "]");
                         stmt1.executeUpdate(device_db_query);
@@ -419,7 +419,7 @@ public class CEIRFeatureFileFunctions {
             ValImei = ValImei.substring(0, 14);
             stmt = conn.createStatement();
             if (prdType.equalsIgnoreCase("post_grace")) {
-                String qury = " update device_usage_db set action = 'ALLOWED' where IMEI =  '" + ValImei + "'  and  action = 'USER_REG' ";
+                String qury = " update "+appdbName+".device_usage_db set action = 'ALLOWED' where IMEI =  '" + ValImei + "'  and  action = 'USER_REG' ";
                 logger.info("  " + qury);
                 stmt.executeUpdate(qury);
             }
@@ -441,7 +441,7 @@ public class CEIRFeatureFileFunctions {
         try {
             ValImei = ValImei.substring(0, 14);
             stmt = conn.createStatement();
-            qury = " delete from greylist_db where imei= '" + ValImei + "' ";
+            qury = " delete from "+appdbName+".greylist_db where imei= '" + ValImei + "' ";
             logger.info("  " + qury);
             stmt.executeUpdate(qury);
 //            qury = " delete from black_list where imei  = '" + ValImei + "'  ";
@@ -482,7 +482,7 @@ public class CEIRFeatureFileFunctions {
                 if (i == 4) {
                     ValImei = "fourth_imei";
                 }
-                query = "select * from regularize_device_db  where  txn_id = '" + txn_id + "'  and  " + ValImei + " is not null  and TAX_PAID_STATUS =  2 ";                         /////
+                query = "select * from "+appdbName+".regularize_device_db  where  txn_id = '" + txn_id + "'  and  " + ValImei + " is not null  and TAX_PAID_STATUS =  2 ";                         /////
                 logger.info("" + query);
                 rs = stmt.executeQuery(query);
                 while (rs.next()) {
@@ -521,7 +521,7 @@ public class CEIRFeatureFileFunctions {
         Statement stmt = null;
         try {
             stmt = conn.createStatement();
-            String qury = "insert into end_user_device_db ( imei_esn_meid , actual_imei, created_on , modified_on, CURRENCY,	DEVICE_ID_TYPE,	DEVICE_SERIAL_NUMBER,	DEVICE_STATUS,	DEVICE_TYPE ,	TAX_PAID_STATUS,	TXN_ID	,USER_ID	,CREATOR_USER_ID	,ORIGIN   ) values"
+            String qury = "insert into "+appdbName+".end_user_device_db ( imei_esn_meid , actual_imei, created_on , modified_on, CURRENCY,	DEVICE_ID_TYPE,	DEVICE_SERIAL_NUMBER,	DEVICE_STATUS,	DEVICE_TYPE ,	TAX_PAID_STATUS,	TXN_ID	,USER_ID	,CREATOR_USER_ID	,ORIGIN   ) values"
                     + "( '" + rs.getString("" + ValImei + "").substring(0, 14) + "', '" + rs.getString("" + ValImei + "") + "',  " + dfnc + " ," + dfnc + ", '" + rs.getString("CURRENCY") + "', '" + rs.getString("DEVICE_ID_TYPE") + "', '" + rs.getString("DEVICE_SERIAL_NUMBER") + "', '" + rs.getString("DEVICE_STATUS") + "', "
                     + " '" + rs.getString("DEVICE_TYPE") + "','" + rs.getString("TAX_PAID_STATUS") + "', '" + rs.getString("TXN_ID") + "', '" + rs.getString("USER_ID") + "', '" + rs.getString("CREATOR_USER_ID") + "',  '" + rs.getString("ORIGIN") + "'   ) ";
 

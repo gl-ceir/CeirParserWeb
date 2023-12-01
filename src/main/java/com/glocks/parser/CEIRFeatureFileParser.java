@@ -8,6 +8,9 @@ import com.glocks.parser.service.ConsignmentInsertUpdate;
 import com.glocks.parser.service.RegisterTac;
 import com.glocks.parser.service.StockDelete;
 import com.glocks.parser.service.WithdrawnTac;
+
+import static com.glocks.parser.MainController.appdbName;
+
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -30,7 +33,7 @@ public class CEIRFeatureFileParser {
         CEIRFeatureFileFunctions ceirfunction = new CEIRFeatureFileFunctions();
         WebActionDbDao webActionDbDao = new WebActionDbDao();
         SysConfigurationDao SysConfigurationDao = new SysConfigurationDao();
-        ResultSet featurers = webActionDbDao.getFileDetails(conn, 2, featureNam);     // Select * from web_action_db
+        ResultSet featurers = webActionDbDao.getFileDetails(conn, 2, featureNam);     // Select * from "+appdbName+".web_action_db
         try {
             while (featurers.next()) {
                 System.out.println("" + featurers.getString("txn_id"));
@@ -151,7 +154,7 @@ public class CEIRFeatureFileParser {
         ResultSet rs1 = null;
         Statement stmt = null;
         try {
-            query = "select * from system_config_list_db where tag='OPERATORS' and interp='" + operator + "'";
+            query = "select * from "+appdbName+".system_config_list_db where tag='OPERATORS' and interp='" + operator + "'";
             logger.info("Query is " + query);
             stmt = conn.createStatement();
             rs1 = stmt.executeQuery(query);
@@ -248,7 +251,7 @@ public class CEIRFeatureFileParser {
         ResultSet rs1 = null;
         String rslt = "";
         int rst = 0;
-        query = " select user_type from  stock_mgmt   where txn_id =  '" + txn_id + "'  ";
+        query = " select user_type from  "+appdbName+".stock_mgmt   where txn_id =  '" + txn_id + "'  ";
         logger.info("getCustomData query .." + query);
         try {
             stmt = conn.createStatement();
@@ -281,7 +284,7 @@ public class CEIRFeatureFileParser {
     public static void updateRawData(Connection conn, String operator, String id, String status) {
         String query = null;
         Statement stmt = null;
-        query = "update " + operator + "_raw" + " set status='" + status + "' where sno='" + id + "'";
+        query = "update "+appdbName+"." + operator + "_raw" + " set status='" + status + "' where sno='" + id + "'";
         logger.info("updateRawData query .." + query);
         try {
             stmt = conn.createStatement();
@@ -306,14 +309,14 @@ public class CEIRFeatureFileParser {
         ResultSet rs1 = null;
         Statement stmt = null;
         try {
-            query = "select a.id as rule_id,a.name as rule_name,b.output as output,b.grace_action, b.post_grace_action, b.failed_rule_action_grace, b.failed_rule_action_post_grace from rule_engine a, rule_engine_mapping b where  a.name=b.name  and a.state='Enabled' and b.feature='"
+            query = "select a.id as rule_id,a.name as rule_name,b.output as output,b.grace_action, b.post_grace_action, b.failed_rule_action_grace, b.failed_rule_action_post_grace from "+appdbName+".rule_engine a, "+appdbName+".rule_engine_mapping b where  a.name=b.name  and a.state='Enabled' and b.feature='"
                     + operator + "' and b.user_type='" + usertype_name + "'  and  b." + period + "_action !='NA'       order by b.rule_order asc";
 
             logger.info("Query is  (getRuleDetails) " + query);
             stmt = conn.createStatement();
             rs1 = stmt.executeQuery(query);
             if (!rs1.isBeforeFirst()) {
-                query = "select a.id as rule_id,a.name as rule_name,b.output as output,b.grace_action, b.post_grace_action, b.failed_rule_action_grace, b.failed_rule_action_post_grace from rule_engine a, rule_engine_mapping b where  a.name=b.name  and a.state='Enabled' and b.feature='"
+                query = "select a.id as rule_id,a.name as rule_name,b.output as output,b.grace_action, b.post_grace_action, b.failed_rule_action_grace, b.failed_rule_action_post_grace from "+appdbName+".rule_engine a, "+appdbName+".rule_engine_mapping b where  a.name=b.name  and a.state='Enabled' and b.feature='"
                         + operator + "' and b.user_type='default' order by b.rule_order asc";
                 stmt = conn.createStatement();
                 rs1 = stmt.executeQuery(query);
@@ -366,7 +369,7 @@ public class CEIRFeatureFileParser {
     public static void updateLastStatuSno(Connection conn, String operator, int id, int limit) {
         String query = null;
         Statement stmt = null;
-        query = "update " + operator + "_raw" + " set status='Start' where sno>'" + id + "'"; //
+        query = "update "+appdbName+"." + operator + "_raw" + " set status='Start' where sno>'" + id + "'"; //
         logger.info(query);
         try {
             stmt = conn.createStatement();
@@ -407,7 +410,7 @@ public class CEIRFeatureFileParser {
         int rsslt = 0;
         String query = null;
         Statement stmt = null;
-        query = "select count(*) as cnt from  " + operator + "_raw  where txn_id ='" + txn_id + "'  ";
+        query = "select count(*) as cnt from  "+appdbName+"." + operator + "_raw  where txn_id ='" + txn_id + "'  ";
         logger.info(" select imeiCountRawTable .. " + query);
         try {
             ResultSet rs = null;

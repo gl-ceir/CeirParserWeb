@@ -1,5 +1,7 @@
 package com.glocks.dao;
 
+import static com.glocks.parser.MainController.appdbName;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -20,7 +22,7 @@ public class ManagementAudTableDao {
 //		boolean isOracle = conn.toString().contains("oracle");
 //		String dateFunction = Util.defaultDate(isOracle);
 //
-//		String query = "insert into " + tableName + " (id, rev, revtype, created_on, device_id_type, "
+//		String query = "insert into "+appdbName+"." + tableName + " (id, rev, revtype, created_on, device_id_type, "
 //				+ "device_launch_date, device_status, device_type, imei_esn_meid, modified_on, multiple_sim_status," 
 //				+ "sn_of_device, txn_id, user_id, feature_name) values(";
 //
@@ -87,7 +89,7 @@ public class ManagementAudTableDao {
 //		Long max = null;
 //
 //		try{
-//			query = "select max(id) as max from " + tableName;
+//			query = "select max(id) as max from "+appdbName+"." + tableName;
 //
 //			logger.info("Query ["+query+"]");
 //			 // System.out.println("Query ["+query+"]");

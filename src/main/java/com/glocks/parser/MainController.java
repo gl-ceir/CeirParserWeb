@@ -216,7 +216,7 @@ public class MainController {
                         logger.info(" File Exists ");
                     } else {
                         try {
-                            String query = "update web_action_db set state=" + 0 + " ,  retry_count = retry_count +1   where    txn_id='" + file_details.getString("txn_id") + "' and feature='" + file_details.getString("feature")
+                            String query = "update "+appdbName+".web_action_db set state=" + 0 + " ,  retry_count = retry_count +1   where    txn_id='" + file_details.getString("txn_id") + "' and feature='" + file_details.getString("feature")
                                     + "' and sub_feature='" + file_details.getString("sub_feature") + "' ";
                             Statement stmt = conn.createStatement();
                             stmt.executeUpdate(query);
@@ -286,7 +286,7 @@ public class MainController {
         String query = null;
         CEIRFeatureFileFunctions ceirfunction = new CEIRFeatureFileFunctions();
         try {
-            query = "select count(*) as cont from  " + feature + "_raw  where txn_id ='" + txn_id + "'";
+            query = "select count(*) as cont from  "+appdbName+"." + feature + "_raw  where txn_id ='" + txn_id + "'";
             logger.info("Query is " + query);
             stmt = conn.createStatement();
             rs = stmt.executeQuery(query);
@@ -303,7 +303,7 @@ public class MainController {
                 new WebActionDbDao().updateFeatureFileStatus(conn, txn_id, 2, feature, sub_feature);
                 logger.info("Web action 2   done");
             } else {
-                query = "delete from   " + outputDb + " where txn_id ='" + txn_id + "'";
+                query = "delete from   "+appdbName+"." + outputDb + " where txn_id ='" + txn_id + "'";
                 logger.info(query);
                 stmt.executeQuery(query);
                 new WebActionDbDao().updateFeatureFileStatus(conn, txn_id, 0, feature, sub_feature);
