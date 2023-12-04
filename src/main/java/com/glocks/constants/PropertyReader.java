@@ -37,17 +37,6 @@ public class PropertyReader {
     @Value("${serverName}")
     public String serverName;
 
-    @Value("#{'${yyMMddSource}'.split(',')}")
-    public List<String> yyMMddSource;
-
-    @Value("#{'${ddMMyySource}'.split(',')}")
-    public List<String> ddMMyySource;
-
-    @Value("#{'${ddMMyyyySource}'.split(',')}")
-    public List<String> ddMMyyyySource;
-
-    @Value("${yyyyMMddSource}")
-    public String yyyyMMddSource;
 
     private InputStream inputStream;
     Properties prop;
