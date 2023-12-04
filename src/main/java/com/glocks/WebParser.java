@@ -12,20 +12,21 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.ApplicationContext;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
+import org.springframework.context.annotation.ComponentScan;
+
 
 @EnableAutoConfiguration
 @EnableCaching
 @EnableEncryptableProperties
 @EnableJpaAuditing
-//@EnableWebMvc
-//@EnableJpaRepositories(repositoryFactoryBeanClass = EnversRevisionRepositoryFactoryBean.class)
-
-@SpringBootApplication(scanBasePackages = {"com.gl.ceirfilecopier"})
+@SpringBootApplication(scanBasePackages = {"com.glocks"})
+@ComponentScan(basePackages = { "com.glocks" })
+    
 public class WebParser {
 
     public static void main(String[] args) {
         ApplicationContext context = SpringApplication.run(WebParser.class, args);
-        MainController mainController = (MainController) context.getBean("featureInitiliseController");
+        MainController mainController  = context.getBean(MainController.class);
         mainController.loader(context);
         context = null;
 
