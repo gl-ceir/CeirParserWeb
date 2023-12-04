@@ -19,8 +19,9 @@ public class ConnectionConfiguration {
 	public Connection getConnection() {
 		EntityManagerFactoryInfo info = (EntityManagerFactoryInfo) em.getEntityManagerFactory();
 	    try {
-			return info.getDataSource().getConnection();
-                        
+   Connection conn = info.getDataSource().getConnection();
+            conn.setAutoCommit(false);
+            return conn;                        
 		} catch (SQLException e) {
 			return null;
 		}
