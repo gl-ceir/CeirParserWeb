@@ -4,7 +4,6 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.List;
 import java.util.Objects;
 import java.util.Properties;
 import org.apache.logging.log4j.LogManager;
@@ -37,6 +36,8 @@ public class PropertyReader {
     @Value("${serverName}")
     public String serverName;
 
+    @Value("${ip}")
+    public String ip;
 
     private InputStream inputStream;
     Properties prop;

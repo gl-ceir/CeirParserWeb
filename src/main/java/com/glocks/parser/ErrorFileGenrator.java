@@ -154,7 +154,7 @@ public class ErrorFileGenrator {
             }
             writer.close();
             if (tag != null || tag.equals("")) {
-                new CEIRFeatureFileFunctions().HttpApiConnecter(tag, responseBody);
+                new HttpURLConnectionExample().HttpApiConnecter(tag, responseBody);
             }
         } catch (Exception e) {
             logger.warn("No File Found ");

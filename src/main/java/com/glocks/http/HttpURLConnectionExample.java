@@ -1,8 +1,8 @@
 package com.glocks.http;
 
-import com.glocks.constants.PropertyReader;
 import com.glocks.parser.ErrorFileGenrator;
-import static com.glocks.parser.ErrorFileGenrator.propertyReader;
+import static com.glocks.parser.MainController.ip;
+import static com.glocks.parser.MainController.serverName;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -25,8 +25,6 @@ public class HttpURLConnectionExample {
 
         int responseCode = con.getResponseCode();
         StringBuffer response = new StringBuffer();
-
-        // System.out.println("GET Response Code :: " + responseCode);
         if (responseCode == HttpURLConnection.HTTP_OK) { // success
             BufferedReader in = new BufferedReader(new InputStreamReader(
                     con.getInputStream()));
@@ -38,11 +36,9 @@ public class HttpURLConnectionExample {
             in.close();
             logger.debug(response.toString());
         } else {
-            logger.warn("GET request not worked");
+            logger.warn("GET request not working Getting "+ responseCode);
         }
-
         return response.toString();
-
     }
 
     public static String sendPOST(String url) throws IOException {
@@ -128,17 +124,9 @@ public class HttpURLConnectionExample {
 
         String tag = "http://$LOCAL_IP:9502/CEIR/uploadedFile/save";
         logger.info("  uploadedFile tag  " + tag);
-        String aa = "";
-        propertyReader = new PropertyReader();
-        try {
-            aa = propertyReader.getConfigPropValue("localIp").trim();
-            logger.info("  .. " + aa);
-        } catch (Exception ex) {
-            logger.info("       " + ex);
-        }
-//          aa = "172.24.2.57";
-        tag = tag.replace("$LOCAL_IP", aa);
-        String serverId = aa.contains("57") ? "1" : "2";
+
+        tag = tag.replace("$LOCAL_IP", ip);
+        String serverId = serverName.contains("1") ? "1" : "2";
 
         String responseBody = "{\n"
                 + "\"fileName\": \"" + fileName + "\",\n"
@@ -165,7 +153,7 @@ public class HttpURLConnectionExample {
             osw.write(responseBody);
             osw.flush();
             osw.close();
-            logger.info("DatA Putted");
+            logger.info("Request Send");
             hurl.connect();
             BufferedReader in = new BufferedReader(new InputStreamReader(hurl.getInputStream()));
             String temp = null;
@@ -183,22 +171,23 @@ public class HttpURLConnectionExample {
         }
     }
 
-    public HttpURLConnection getHttpConnection(String url, String type) {
-        URL uri = null;
-        HttpURLConnection con = null;
-        try {
-            uri = new URL(url);
-            con = (HttpURLConnection) uri.openConnection();
-            con.setRequestMethod(type); // type: POST, PUT, DELETE, GET
-            con.setDoOutput(true);
-            con.setDoInput(true);
-            con.setConnectTimeout(60000); // 60 secs...
-            con.setReadTimeout(60000); // 60 secs
-            con.setRequestProperty("Accept-Encoding", "application/json");
-            con.setRequestProperty("Content-Type", "application/json");
-        } catch (Exception e) {
-            logger.error(e.getLocalizedMessage() + "" + e);
-        }
-        return con;
-    }
+//    public HttpURLConnection getHttpConnection(String url, String type) {
+//        URL uri = null;
+//        HttpURLConnection con = null;
+//        try {
+//            uri = new URL(url);
+//            con = (HttpURLConnection) uri.openConnection();
+//            con.setRequestMethod(type); // type: POST, PUT, DELETE, GET
+//            con.setDoOutput(true);
+//            con.setDoInput(true);
+//            con.setConnectTimeout(60000); // 60 secs...
+//            con.setReadTimeout(60000); // 60 secs
+//            con.setRequestProperty("Accept-Encoding", "application/json");
+//            con.setRequestProperty("Content-Type", "application/json");
+//        } catch (Exception e) {
+//            logger.error(e.getLocalizedMessage() + "" + e);
+//        }
+//        return con;
+//    }
+    
 }

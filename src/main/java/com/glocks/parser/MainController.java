@@ -18,7 +18,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
-
 import org.springframework.stereotype.Service;
  
 
@@ -31,11 +30,12 @@ public class MainController {
 
     private static final Logger logger = LogManager.getLogger(MainController.class);
     static StackTraceElement l = new Exception().getStackTrace()[0];
-   public  static String appdbName = null;
+    public  static String appdbName = null;
     static String auddbName = null;
     static String repdbName = null;
-    static String serverName = null;
+   public static String serverName = null;
     static String dateFunction = null;
+    public static String ip = null;
     public static PropertyReader propertyReader = null;
     static ConnectionConfiguration connectionConfiguration = null;
     static Connection conn = null;
@@ -51,9 +51,9 @@ public class MainController {
         appdbName = propertyReader.appdbName;
         auddbName = propertyReader.auddbName;
         repdbName = propertyReader.repdbName;
-        
-        
-
+         ip = propertyReader.ip;
+         serverName= propertyReader.serverName;
+         
         logger.info(" MainController");
       //  Connection conn = new com.glocks.db.MySQLConnection().getConnection();
         String basePath = "";

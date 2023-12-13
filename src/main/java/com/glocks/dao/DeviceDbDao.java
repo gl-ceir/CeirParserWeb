@@ -1,17 +1,15 @@
 package com.glocks.dao;
 
 import static com.glocks.parser.MainController.appdbName;
-
+import com.glocks.pojo.DeviceDb;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.LinkedList;
 import java.util.List;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import com.glocks.pojo.DeviceDb;
 
 public class DeviceDbDao {
 
@@ -93,7 +91,7 @@ public class DeviceDbDao {
           }
            
      }
-
+}
 //     public void insertDeviceDbAud(Connection conn, List<DeviceDb> deviceDbs) {
 //          boolean isOracle = conn.toString().contains("oracle");
 //          String dateFunction = Util.defaultDate(isOracle);
@@ -194,7 +192,7 @@ public class DeviceDbDao {
 //          }
 //     }
 //
-}
+
 
 
 

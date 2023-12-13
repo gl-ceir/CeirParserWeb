@@ -3,16 +3,13 @@ package com.glocks.parser;
 import com.gl.Rule_engine_Old.RuleEngineApplication;
 import com.glocks.constants.PropertyReader;
 import com.glocks.dao.SysConfigurationDao;
+import com.glocks.http.HttpURLConnectionExample;
 import static com.glocks.parser.MainController.appdbName;
+import static com.glocks.parser.MainController.ip;
 import com.glocks.parser.service.ConsignmentInsertUpdate;
 import com.glocks.parser.service.StolenRecoverBlockUnBlockImpl;
 import com.glocks.util.Util;
-import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -23,7 +20,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 public class CEIRFeatureFileFunctions {
-
+    
     public static PropertyReader propertyReader;
 
     Logger logger = LogManager.getLogger(CEIRFeatureFileFunctions.class);
@@ -231,70 +228,17 @@ public class CEIRFeatureFileFunctions {
                 tag = rs1.getString("value");
             }
             stmt.close();
-
             logger.info(" Tag before Replace  " + tag);
-            String aa = propertyReader.getConfigPropValue("localIp").trim();
-            logger.info("  aa    " + aa);
-//               tag = tag.replace("$LOCAL_IP1", aa);
-            tag = tag.replace("$LOCAL_IP", aa);
-            logger.info("tag after Replace  " + tag);
+            tag = tag.replace("$LOCAL_IP", ip);
             logger.info("tag after Replace  " + tag);
 
-            HttpApiConnecter(tag, responseBody);
+             new HttpURLConnectionExample().HttpApiConnecter(tag, responseBody);
         } catch (Exception e) {
             logger.error("" + l.getClassName() + "/" + l.getMethodName() + ":" + l.getLineNumber() + e);
         }
     }
 
-    public void HttpApiConnecter(String tag, String responseBody) {
-        try {
-            URL url = new URL(tag);
-            HttpURLConnection hurl = (HttpURLConnection) url.openConnection();
-            hurl.setRequestMethod("PUT");
-            hurl.setDoOutput(true);
-            hurl.setRequestProperty("Content-Type", "application/json");
-            hurl.setRequestProperty("Accept", "application/json");
-            OutputStreamWriter osw = new OutputStreamWriter(hurl.getOutputStream());
-            osw.write(responseBody);
-            osw.flush();
-            osw.close();
-            logger.info("DatA Putted");
-            hurl.connect();
-            BufferedReader in = new BufferedReader(new InputStreamReader(hurl.getInputStream()));
-            String temp = null;
-            StringBuilder sb = new StringBuilder();
-            while ((temp = in.readLine()) != null) {
-                sb.append(temp).append(" ");
-            }
-            String result = sb.toString();
-            in.close();
-            logger.info("OUTPUT result is .." + result);
-        } catch (Exception e) {
-            logger.error(responseBody + "  " + e);
-            new ErrorFileGenrator().apiConnectionErrorFileWriter(tag, responseBody);
-            logger.error("" + l.getClassName() + "/" + l.getMethodName() + ":" + l.getLineNumber() + e);
-        }
 
-    }
-
-    public HttpURLConnection getHttpConnection(String url, String type) {
-        URL uri = null;
-        HttpURLConnection con = null;
-        try {
-            uri = new URL(url);
-            con = (HttpURLConnection) uri.openConnection();
-            con.setRequestMethod(type); // type: POST, PUT, DELETE, GET
-            con.setDoOutput(true);
-            con.setDoInput(true);
-            con.setConnectTimeout(60000); // 60 secs...
-            con.setReadTimeout(60000); // 60 secs
-            con.setRequestProperty("Accept-Encoding", "application/json");
-            con.setRequestProperty("Content-Type", "application/json");
-        } catch (Exception e) {
-            logger.error("" + l.getClassName() + "/" + l.getMethodName() + ":" + l.getLineNumber() + e);
-        }
-        return con;
-    }
 
     public void updateFeatureManagementDeleteStatus(Connection conn, String txn_id, int status, String table_name) {
         String query = "";

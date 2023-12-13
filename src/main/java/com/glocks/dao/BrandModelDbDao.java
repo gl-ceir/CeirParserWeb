@@ -4,12 +4,12 @@
  */
 package com.glocks.dao;
 
+import static com.glocks.parser.MainController.appdbName;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import static com.glocks.parser.MainController.appdbName;
 
 
 
@@ -34,8 +34,8 @@ public class BrandModelDbDao {
             stmt2 = conn.createStatement();
             rs = stmt.executeQuery(query);
             while (rs.next()) {
-                String updtQry = " update  "+appdbName+"." + TableName + " set model_name = (select  MODEL_NAME_NEW  from "+appdbName+".gsma_tac_db where device_id = '" + rs.getString("tac") + "'  ) "
-                        + " ,   brand_name = ( select BRAND_NAME_NEW  from "+appdbName+".gsma_tac_db where device_id = '" + rs.getString("tac") + "' )    where tac =   '" + rs.getString("tac") + "'  ";
+                String updtQry = " update  "+appdbName+"." + TableName + " set model_name = (select  model_name_new  from "+appdbName+".gsma_tac_db where device_id = '" + rs.getString("tac") + "'  ) "
+                        + " ,   brand_name = ( select brand_name_new  from "+appdbName+".gsma_tac_db where device_id = '" + rs.getString("tac") + "' )    where tac =   '" + rs.getString("tac") + "'  ";
                 logger.info(updtQry);
                 stmt2.executeUpdate(updtQry);
             }
