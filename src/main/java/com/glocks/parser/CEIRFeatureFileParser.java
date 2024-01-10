@@ -2,20 +2,21 @@ package com.glocks.parser;
 
 import com.glocks.dao.SysConfigurationDao;
 import com.glocks.dao.WebActionDbDao;
-import com.glocks.parser.service.ApproveConsignment;
-import com.glocks.parser.service.ConsignmentDelete;
-import com.glocks.parser.service.ConsignmentInsertUpdate;
-import com.glocks.parser.service.RegisterTac;
-import com.glocks.parser.service.StockDelete;
-import com.glocks.parser.service.WithdrawnTac;
-
-import static com.glocks.parser.MainController.appdbName;
-
-import java.sql.*;
-import java.util.ArrayList;
-import java.util.HashMap;
+import com.glocks.parser.service.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+
+import static com.glocks.parser.MainController.appdbName;
 
 public class CEIRFeatureFileParser {
 
@@ -63,14 +64,24 @@ public class CEIRFeatureFileParser {
                     logger.info("user_type is [" + user_type + "] ");
                     feature = featurers.getString("feature");
                     ArrayList<Rule> rulelist = new ArrayList<Rule>();
-                    String period = SysConfigurationDao.getTagValue(conn, "GRACE_PERIOD_END_DATE");
+                    String date = SysConfigurationDao.getTagValue(conn, "GRACE_PERIOD_END_DATE");
+                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+
+                    String period= "grace";
+                    try {
+                        var graceDate = sdf.parse(date);
+                        if (new Date().compareTo(graceDate) > 0)
+                            period = "post_grace";
+                    } catch (ParseException e) {
+                        logger.error("" + e);
+                    }
                     logger.info("Period is [" + period + "] ");
                     logger.info("State is [" + featurers.getInt("state") + "] ");
                     rulelist = CEIRFeatureFileParser.getRuleDetails(feature, conn, "", period, "", user_type);
                     addCDRInProfileWithRule(feature, conn, rulelist, "", featurers.getString("txn_id"), featurers.getString("sub_feature"), user_type, featurers.getInt("state"));
                 }
             }
-            conn.close();
+
         } catch (SQLException e) {
 
             try {
@@ -83,7 +94,7 @@ public class CEIRFeatureFileParser {
             logger.error("" + e);
 
         } finally {
-            System.out.println("Exit");
+
             try {
 //                sleep(20000);
             } catch (Exception ex) {
@@ -154,7 +165,7 @@ public class CEIRFeatureFileParser {
         ResultSet rs1 = null;
         Statement stmt = null;
         try {
-            query = "select * from "+appdbName+".system_config_list_db where tag='OPERATORS' and interp='" + operator + "'";
+            query = "select * from "+appdbName+".sys_param_list_value where tag='OPERATORS' and interp='" + operator + "'";
             logger.info("Query is " + query);
             stmt = conn.createStatement();
             rs1 = stmt.executeQuery(query);
@@ -180,7 +191,7 @@ public class CEIRFeatureFileParser {
     public static void addCDRInProfileWithRule(String operator, Connection conn, ArrayList<Rule> rulelist, String operator_tag, String txn_id, String sub_feature, String usertype_name, int webActState) {
         CEIRFeatureFileFunctions ceirfunction = new CEIRFeatureFileFunctions();
         WebActionDbDao webActionDbDao = new WebActionDbDao();
-        try {
+        try {logger.info("Feature/operator: "+ operator+ ",  Sub feature Value ::" + sub_feature);
             if (((sub_feature.equalsIgnoreCase("Register") || sub_feature.equalsIgnoreCase("update") || sub_feature.equalsIgnoreCase("UPLOAD"))) && !operator.equalsIgnoreCase("TYPE_APPROVED")) {
                 logger.info(" NOTE.. ** NOT FOR TYPE APPROVE  ::" + sub_feature);
                 new ConsignmentInsertUpdate().process(conn, operator, sub_feature, rulelist, txn_id, operator_tag, usertype_name, webActState);
@@ -259,7 +270,6 @@ public class CEIRFeatureFileParser {
             while (rs1.next()) {
                 rslt = rs1.getString(1);
             }
-
             if (rslt.equalsIgnoreCase("Custom")) {
                 logger.info("IT is  Custom");
                 rst = 1;
@@ -284,8 +294,8 @@ public class CEIRFeatureFileParser {
     public static void updateRawData(Connection conn, String operator, String id, String status) {
         String query = null;
         Statement stmt = null;
-        query = "update "+appdbName+"." + operator + "_raw" + " set status='" + status + "' where sno='" + id + "'";
-        logger.info("updateRawData query .." + query);
+        query = "update "+appdbName+"." + operator + "_temp_data" + " set status='" + status + "' where sno='" + id + "'";
+        logger.info("update query .." + query);
         try {
             stmt = conn.createStatement();
             stmt.executeUpdate(query);
@@ -309,14 +319,14 @@ public class CEIRFeatureFileParser {
         ResultSet rs1 = null;
         Statement stmt = null;
         try {
-            query = "select a.id as rule_id,a.name as rule_name,b.output as output,b.grace_action, b.post_grace_action, b.failed_rule_action_grace, b.failed_rule_action_post_grace from "+appdbName+".rule_engine a, "+appdbName+".rule_engine_mapping b where  a.name=b.name  and a.state='Enabled' and b.feature='"
+            query = "select a.id as rule_id,a.name as rule_name,b.output as output,b.grace_action, b.post_grace_action, b.failed_rule_action_grace, b.failed_rule_action_post_grace from "+appdbName+".rule a, "+appdbName+".feature_rule b where  a.name=b.name  and a.state='Enabled' and b.feature='"
                     + operator + "' and b.user_type='" + usertype_name + "'  and  b." + period + "_action !='NA'       order by b.rule_order asc";
 
             logger.info("Query is  (getRuleDetails) " + query);
             stmt = conn.createStatement();
             rs1 = stmt.executeQuery(query);
             if (!rs1.isBeforeFirst()) {
-                query = "select a.id as rule_id,a.name as rule_name,b.output as output,b.grace_action, b.post_grace_action, b.failed_rule_action_grace, b.failed_rule_action_post_grace from "+appdbName+".rule_engine a, "+appdbName+".rule_engine_mapping b where  a.name=b.name  and a.state='Enabled' and b.feature='"
+                query = "select a.id as rule_id,a.name as rule_name,b.output as output,b.grace_action, b.post_grace_action, b.failed_rule_action_grace, b.failed_rule_action_post_grace from "+appdbName+".rule a, "+appdbName+".feature_rule b where  a.name=b.name  and a.state='Enabled' and b.feature='"
                         + operator + "' and b.user_type='default' order by b.rule_order asc";
                 stmt = conn.createStatement();
                 rs1 = stmt.executeQuery(query);
@@ -340,7 +350,7 @@ public class CEIRFeatureFileParser {
                 }
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
+            logger.error("Error.getRuleDetails ." + ex);
         } finally {
             try {
                 stmt.close();
@@ -369,7 +379,7 @@ public class CEIRFeatureFileParser {
     public static void updateLastStatuSno(Connection conn, String operator, int id, int limit) {
         String query = null;
         Statement stmt = null;
-        query = "update "+appdbName+"." + operator + "_raw" + " set status='Start' where sno>'" + id + "'"; //
+        query = "update "+appdbName+"." + operator + "_temp_data" + " set status='Start' where sno>'" + id + "'"; //
         logger.info(query);
         try {
             stmt = conn.createStatement();
@@ -387,31 +397,13 @@ public class CEIRFeatureFileParser {
         }
     }
 
-//     public static void updateRawLastSno(Connection conn, String operator, int sno) {
-//          String query = null;
-//          Statement stmt = null;
-//          query = "update re p_schedule_config_db set last_upload_sno=" + sno + " where operator='" + operator + "'";
-//           try {
-//               stmt = conn.createStatement();
-//               stmt.executeUpdate(query);
-//               conn.commit();
-//          } catch (SQLException e) {
-//               logger.error("Error.." + e);
-//          } finally {
-//               try {
-//                    stmt.close();
-//               } catch (SQLException e) {
-//                    // TODO Auto-generated catch block
-//                    logger.error("Error.." + e);
-//               }
-//          }
-//     }
+
     public static int imeiCountfromRawTable(Connection conn, String txn_id, String operator) {
         int rsslt = 0;
         String query = null;
         Statement stmt = null;
-        query = "select count(*) as cnt from  "+appdbName+"." + operator + "_raw  where txn_id ='" + txn_id + "'  ";
-        logger.info(" select imeiCountRawTable .. " + query);
+        query = "select count(*) as cnt from  "+appdbName+"." + operator + "_temp_data  where txn_id ='" + txn_id + "'  ";
+        logger.info(" Query .. " + query);
         try {
             ResultSet rs = null;
             stmt = conn.createStatement();

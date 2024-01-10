@@ -26,10 +26,10 @@ public class UserWithProfileDao {
 
 		try{
 			query = "select "+appdbName+".users.id as id, "+appdbName+".user_profile.first_name as first_name, "
-					+ ""+appdbName+".usertype.usertype_name as usertype_name "
+					+ ""+appdbName+".user_type.user_type_name as usertype_name "
 					+ "from "+appdbName+".users "
 					+ "inner join "+appdbName+".user_profile on "+appdbName+".users.id="+appdbName+".user_profile.userid "
-					+ "inner join "+appdbName+".usertype on "+appdbName+".users.usertype_id="+appdbName+".usertype.id " 
+					+ "inner join "+appdbName+".user_type on "+appdbName+".users.user_type_id="+appdbName+".user_type.id "
 					+ "where "+appdbName+".users.id=" + userId;
 
 			logger.info("Query ["+query+"]"); 
@@ -37,7 +37,7 @@ public class UserWithProfileDao {
 			rs = stmt.executeQuery(query);
 
 			if(rs.next()){
-				return new UserWithProfile(rs.getLong("id"), rs.getString("first_name"), rs.getString("usertype_name"));
+				return new UserWithProfile(rs.getLong("id"), rs.getString("first_name"), rs.getString("user_type_name"));
 			}
 		}
 		catch(Exception e){

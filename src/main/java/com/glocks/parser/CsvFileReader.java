@@ -4,31 +4,16 @@ import com.glocks.dao.SysConfigurationDao;
 import com.glocks.dao.WebActionDbDao;
 import com.glocks.util.Util;
 import com.glocks.zte.ZTEFields;
-import java.io.BufferedReader;
-import java.io.DataInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+import java.io.*;
+import java.sql.*;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.*;
+
 import static com.glocks.parser.MainController.appdbName;
 
 
@@ -348,7 +333,7 @@ public class CsvFileReader {
         ErrorFileGenrator errFile = new ErrorFileGenrator();
         Set<String> set = new HashSet<String>();
         Set<String> hash_Set = new HashSet<String>();
-        HashMap<String, String> msgConfig = new HashMap<String, String>();
+    //    HashMap<String, String> msgConfig = new HashMap<String, String>();
         ArrayList<String> fileLines = new ArrayList<String>();
 
         WebActionDbDao webActionDbDao = new WebActionDbDao();
@@ -371,7 +356,7 @@ public class CsvFileReader {
             String qry = " select quantity, device_quantity from  "+appdbName+"." + main_type.trim().toLowerCase() + "_mgmt where txn_id  = '" + txn_id + "'";
             if (main_type.equalsIgnoreCase("Stolen") || main_type.equalsIgnoreCase("Recovery")
                     || main_type.equalsIgnoreCase("Block") || main_type.equalsIgnoreCase("Unblock")) {
-                qry = "  select  quantity, device_quantity from "+appdbName+".stolenand_recovery_mgmt  where txn_id  = '" + txn_id + "'  ";
+                qry = "  select  quantity, device_quantity from "+appdbName+".stolen_and_recovery_txn  where txn_id  = '" + txn_id + "'  ";
             }
             new FeatureForSingleStolenBlock().deleteFromRawTable(conn, txn_id, main_type);
             ResultSet resul5 = st5.executeQuery(qry);
@@ -391,7 +376,7 @@ public class CsvFileReader {
             file = new File(filePath);
             fr = new FileReader(file);
             br = new BufferedReader(fr);
-            query = "insert into "+appdbName+"." + main_type + "_raw" + "( ";
+            query = "insert into "+appdbName+"." + main_type + "_temp_data" + "( ";
             int pass_my_batch = 0;
             int cnt = 0;
             int my_batch_count = 10;   //  raw_upload_set_no1 but tbl removed
@@ -400,60 +385,43 @@ public class CsvFileReader {
             List alst = new ArrayList();
             String errorString = " , ";
             Statement stmt2 = conn.createStatement();
-            ResultSet rsult = stmt2.executeQuery("select tag ,value from "+appdbName+".message_configuration_db");
-            try {
-                while (rsult.next()) {
-                    msgConfig.put(rsult.getString("tag"), rsult.getString("value"));
-                }
-            } catch (Exception e) {
-                logger.error("" + l.getClassName() + "/" + l.getMethodName() + ":" + l.getLineNumber() + e);
-            }
-            rsult.close();
-            String interpQury = " select interp from "+appdbName+".system_config_list_db where tag =  ";
+//            ResultSet rsult = stmt2.executeQuery("select tag ,value from "+appdbName+".msg_cfg");
+//            try {
+//                while (rsult.next()) {
+//                    msgConfig.put(rsult.getString("tag"), rsult.getString("value"));
+//                }
+//            } catch (Exception e) {
+//                logger.error("" + l.getClassName() + "/" + l.getMethodName() + ":" + l.getLineNumber() + e);
+//            }
+       //     rsult.close();
+            String interpQury = " select interpretation from "+appdbName+".sys_param_list_value where tag =  ";
 
             ResultSet result1 = stmt2.executeQuery(interpQury + " 'DEVICE_TYPE'");
             Set<String> deviceType = new HashSet<String>();
-            try {
                 while (result1.next()) {
-                    deviceType.add(result1.getString("interp").toLowerCase());
+                    deviceType.add(result1.getString("interpretation").toLowerCase());
                 }
-            } catch (Exception e) {
-                logger.error("" + l.getClassName() + "/" + l.getMethodName() + ":" + l.getLineNumber() + e);
-            }
             stmt2.close();
             Statement stmt3 = conn.createStatement();
             ResultSet result3 = stmt3.executeQuery(interpQury + " 'DEVICE_ID_TYPE' ");
             Set<String> deviceType3 = new HashSet<String>();
-            try {
                 while (result3.next()) {
-                    deviceType3.add(result3.getString("interp").toLowerCase());
+                    deviceType3.add(result3.getString("interpretation").toLowerCase());
                 }
-            } catch (Exception e) {
-                logger.error("" + l.getClassName() + "/" + l.getMethodName() + ":" + l.getLineNumber() + e);
-                logger.info("Error at DEVICE_ID_TYPE " + e);
-            }
             stmt3.close();
             Statement stmt4 = conn.createStatement();
             ResultSet result4 = stmt4.executeQuery(interpQury + " 'MULTI_SIM_STATUS' ");
             Set<String> deviceType4 = new HashSet<String>();
-            try {
                 while (result4.next()) {
-                    deviceType4.add(result4.getString("interp").toLowerCase());
+                    deviceType4.add(result4.getString("interpretation").toLowerCase());
                 }
-            } catch (Exception e) {
-                logger.info("Error at MULTI_SIM_STATUS " + e);
-            }
             stmt4.close();
             Statement stmt5 = conn.createStatement();
             ResultSet result5 = stmt5.executeQuery(interpQury + " 'DEVICE_STATUS'");
             Set<String> deviceType5 = new HashSet<String>();
-            try {
                 while (result5.next()) {
                     deviceType5.add(result5.getString(1).toLowerCase());
                 }
-            } catch (Exception e) {
-                logger.error("" + l.getClassName() + "/" + l.getMethodName() + ":" + l.getLineNumber() + e);
-            }
             stmt5.close();
             String errorFilePath = new SysConfigurationDao().getTagValue(conn, "system_error_filepath");
             String error_file_path = errorFilePath + txn_id + "/" + txn_id + "_error.csv";
@@ -461,7 +429,6 @@ public class CsvFileReader {
             while ((line = br.readLine()) != null) {
                 data = line.split(",", -1);
                 logger.info("line is " + line + "  line length " + line.trim().length());
-
                 if (line.replace(",", " ").trim().length() > 0) {
                     errorString = "";
                     if (k == 0) {    // check header
@@ -472,7 +439,6 @@ public class CsvFileReader {
                             fr.close();/////////
                             break;
                         }
-
                         logger.info(" Check for File Column Empty ");
                         for (int fldCount = 0; fldCount < data.length; fldCount++) {
                             if (data[fldCount].equals("") || data[fldCount] == "") {
@@ -491,10 +457,8 @@ public class CsvFileReader {
                             break;
                         }
                         logger.info(" Check for Configured Column name match with File Headers ");
-
                         logger.info("data.length " + data.length);
                         logger.info(" myfilelist.size()" + myfilelist.size());
-
                         if (data.length == myfilelist.size()) {
 
                             logger.info("Configured Column name and File Headers are matched");
@@ -506,19 +470,17 @@ public class CsvFileReader {
                                 my_column_name = my_column_name.replaceAll("_", "");
                                 my_column_name = my_column_name.replaceAll(" ", "");
                                 my_column_name = my_column_name.replaceAll("/", "");
-                                logger.info(cdrColumn.columName + " file column " + data[my_column_count].trim());
 
+                                logger.info(cdrColumn.columName + " file column " + data[my_column_count].trim());
                                 if (cdrColumn.columName.equalsIgnoreCase("SNofDevice")) {
                                     SNofDeviceValue = cdrColumn.graceType;
-                                    logger.info(cdrColumn.columName + " //SNofDeviceValue...." + SNofDeviceValue);
-
+                                    logger.info(cdrColumn.columName + " //SNoOfDeviceValue...." + SNofDeviceValue);
                                 }
-
                                 if ((cdrColumn.columName).trim().equalsIgnoreCase(my_column_name)) {
-                                    logger.info("column name matchedd...." + my_column_name);
+                                    logger.info("column name matched...." + my_column_name);
                                     my_column_count++;
                                 } else {
-                                    logger.info("column name  NOTT matchedd ");
+                                    logger.info("column name NOT matched for " + cdrColumn.columName + " to " + my_column_name);
                                     logger.info(alst.toArray());
 
 //                                             if (!alst.contains(my_column_name)) {      //  aug5
@@ -530,7 +492,7 @@ public class CsvFileReader {
 //                                             }
                                 }
                             }
-                            logger.info("Total column mtch check ");
+                            logger.info("Total column match done   ");
                             if (my_column_count == myfilelist.size()) {
                             } else {
                                 failed_flag = 0;
@@ -549,7 +511,6 @@ public class CsvFileReader {
                         }
                         fileLines.add(line.toString() + ",Error Code , Error Message");
                     } else {
-                        logger.info("FILE AFTER HEADER");
                         int j = 1;           //
                         logger.info(" DATA " + data[j - 1]);
                         String[] arrOfFile = line.trim().split(",", 8);
@@ -594,16 +555,14 @@ public class CsvFileReader {
                             failed_flag = 0; /// added after
                         }
 
-                        try {
+
                             logger.debug("###");
                             if (set.add(imeiV.substring(0, minDvcTypeIdLength)) == false) {
                                 logger.info("errfor First Wrok set.." + imeiV);
                                 errorString += "   Error Code :CON_FILE_0008, Error Message:   The record is duplicate in the file,";
                                 failed_flag = 0; /// added after
                             }
-                        } catch (Exception e) {
-//                                   logger.debug("Excpt e minDvcTypeIdLength  " + e);
-                        }
+
 
                         logger.debug("###");
                         if (!(deviceType4.contains(data[2].trim().toLowerCase()))) {
@@ -616,7 +575,7 @@ public class CsvFileReader {
                             errorString += "  Error Code :CON_FILE_0006, Error Message:  The field value(Device Status) is not as per the specifications,";
                             failed_flag = 0;
                         }
-                        logger.debug("^^^");
+
 
                         boolean val = validateJavaDate(data[5]);
                         if (!val) {
@@ -671,7 +630,6 @@ public class CsvFileReader {
 
             try {
                 if (SNofDeviceValue.equalsIgnoreCase("Mandatory")) {
-
                     Map<String, Integer> hm = new HashMap<String, Integer>();
                     for (String ii : sourceTacList) {
                         Integer j = hm.get(ii);
@@ -694,6 +652,9 @@ public class CsvFileReader {
 
             br.close();
             k = 0;
+
+            //
+
             if (failed_flag == 1) {
                 File errorfile = new File(error_file_path);
                 if (errorfile.exists()) {     // in case of no error   ,,  file is deleted
@@ -713,7 +674,6 @@ public class CsvFileReader {
                     if (line.replace(",", " ").trim().length() > 0) {
                         if (k == 0) {
                             if (data.length == myfilelist.size()) {
-                                logger.info("Configured Column name and File Headers are matched");
                                 int my_column_count = 0;
                                 for (CDRColumn cdrColumn : myfilelist) {
                                     if (cdrColumn.columName.equals("IMEI")) {
@@ -724,10 +684,9 @@ public class CsvFileReader {
                                     my_column_count++;
                                 }
                                 logger.info(" Inner Query : " + query);
-
                                 if (my_column_count == myfilelist.size()) {
-                                    query = query + "txn_id" + "," + "file_name" + "," + "feature_type" + ",created_on ,modified_on    ";   // removin comma may14
-                                    values = values + "?,?,?,?,?  ";
+                                    query = query + "txn_id" + "," + "file_name" + "," + "feature_type" + "     ";   //
+                                    values = values + "?,?,?  ";
                                     query = query.substring(0, query.length() - 1) + ") "
                                             + values.substring(0, values.length() - 1) + ")";
                                     ps = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
@@ -742,9 +701,9 @@ public class CsvFileReader {
                         } else {
                             int j = 1;
                             if (failed_flag == 1) {
-                                if (data[0].equals("") && data[1].equals("") && data[2].equals("") && data[3].equals("")
-                                        && data[4].equals("") && data[5].equals("") && data[6].equals("")) {
-                                    logger.info("err..   BLNK FILE   ,, just skip it");
+                                if (data[0].isEmpty() && data[1].isEmpty() && data[2].isEmpty() && data[3].isEmpty()
+                                        && data[4].isEmpty() && data[5].isEmpty() && data[6].isEmpty()) {
+                                    logger.info("Blank FILE just skip it");
                                     continue;
                                 }
                                 String imeiV = data[4].trim();
@@ -754,14 +713,13 @@ public class CsvFileReader {
                                 } else {
                                     aList.add(imeiV);
                                     for (; j <= data.length; j++) {
-                                        logger.debug("DATA at setString " + data[j - 1].trim());
+                                        logger.info("DATA at setString " + data[j - 1].trim());
                                         ps.setString(j, data[j - 1].trim());
                                     }
                                     ps.setString(j, txn_id);
                                     ps.setString(j + 1, fileName);
                                     ps.setString(j + 2, main_type);
-                                    ps.setString(j + 3, stringDate);
-                                    ps.setString(j + 4, stringDate);
+
                                     logger.debug(fileName + main_type + stringDate + txn_id);
                                     ps.addBatch();
                                     pass_my_batch++;
@@ -1032,7 +990,7 @@ public class CsvFileReader {
             // temPS.clearParameters();
             // }
 
-            new com.glocks.AdditionalBackEndProcess.FileList().moveFile(fileName, repName, "", "");
+            moveFile(fileName, repName, "", "");
 
             // cdrCount = String.valueOf(i+1);
             if (cdrCount != null && cdrStartTime != null && cdrEndTime != null) {
@@ -1131,7 +1089,6 @@ public class CsvFileReader {
         if (rs0Count == 0) {
             qry = "  and user_type =  'default'  ";
         } else {
-
             qry = "  and user_type =  '" + usertype_name + "'  ";
         }
 
@@ -1139,7 +1096,6 @@ public class CsvFileReader {
         ResultSet rs = null;
         try {
             query = "select * from "+appdbName+".static_rule_engine_mapping where feature='" + feature + "'   " + qry + "   order by id asc    "; /// usertype
-
             stmt = conn.createStatement();
             rs = stmt.executeQuery(query);
             logger.info("Query is for static rule_engine_mapping (get CDRFields) ..." + query);
@@ -1237,6 +1193,49 @@ public class CsvFileReader {
         }
         return lastDate;
     }
+
+    public boolean moveFile(String fileName, String directoryName, String basePath, String type) {
+        boolean result = false;
+        String path = null;
+        File oldFile = null;
+        File newFile = null;
+        InputStream is = null;
+        OutputStream os = null;
+        byte[] buffer = null;
+        try {
+            path = basePath + "/";
+            oldFile = new File(path + directoryName + "/" + fileName);
+            logger.info("performing moving of file type[" + type + "] base path is " + oldFile);
+            if (type.equalsIgnoreCase("error")) {
+                newFile = new File(path + "old/" + fileName + type);
+            } else {
+                newFile = new File(path + "old/" + fileName);
+            }
+            is = new FileInputStream(oldFile);
+            os = new FileOutputStream(newFile);
+            buffer = new byte[1024];
+            while (is.read(buffer) > 0) {
+                os.write(buffer);
+            }
+            is.close();
+            os.close();
+            oldFile.deleteOnExit();
+            oldFile.delete();
+
+        } catch (Exception e) {
+            result = false;
+        } finally {
+            path = null;
+            oldFile = null;
+            newFile = null;
+            is = null;
+            os = null;
+            buffer = null;
+        }
+        return result;
+    }
+
+
 
 //     public String getPreviousFileCounts(String repName, Connection conn) {
 //          String seq_no = null;
@@ -1559,7 +1558,7 @@ public class CsvFileReader {
     }
 
     public boolean validateJavaDate(String strDate) {
-        logger.info("date,operator,," + strDate);
+        logger.info("date " + strDate);
         strDate = strDate.replaceAll("/", "-");
         logger.info("date....." + strDate);
         if (strDate.trim().equals("")) {
@@ -1620,7 +1619,7 @@ public class CsvFileReader {
         String raw_query = "insert into "+appdbName+".cdr_file_details_db(created_on, file_name, operator, total_records_count, total_error_record_count,source   ,   P1StartTime ,P1EndTime    ) "
                 + "  values(current_timestamp ,  '" + fileName + "', '" + repName + "', '" + total_records_count + "','" + total_error_record_count + "','" + sourc + "' , p1starttime,p1endTime  )";
         try {
-            logger.info("  cdrFileDetailsInsert is " + raw_query);
+            logger.info(" " + raw_query);
             stmt = conn.createStatement();
             stmt.executeUpdate(raw_query);
 
@@ -1648,7 +1647,7 @@ public class CsvFileReader {
 //    public void readFeatureWithoutFile(Connection conn, String feature, int raw_upload_set_no, String txn_id,
 //            String sub_feature, String mgnt_table_db, String user_type) {
 //
-//        Statement stmt = null; // stolenand_recovery_mgmt
+//        Statement stmt = null; // stolen_and_recovery_txn
 //        Statement stmt1 = null;
 //        Map<String, String> map = new HashMap<String, String>();
 //        try {
@@ -2135,7 +2134,7 @@ public class CsvFileReader {
 //            DeviceSerial = " ( select  device_serial_number  from single_imei_details where txn_id ='" + txn_id + "' )";
 //        }
 //
-//        String query = "insert into  " + feature + "_raw"
+//        String query = "insert into  " + feature + "_ raw"
 //                + "   (   DeviceType,DeviceIdType ,MultipleSIMStatus,SNofDevice,IMEIESNMEID,Devicelaunchdate,DeviceStatus,status,file_name , txn_id , time ,feature_type)   values  "
 //                + " (  " + DeviceType + "  , " + DeviceIdType + " ,  " + MultipleSIMStatus + " ,  " + DeviceSerial
 //                + " ,  '" + imei_esn_meid + "' , '', '' , 'Init' ,  'NA' , '" + txn_id + "' ,  '" + dateNow + "'  , '"

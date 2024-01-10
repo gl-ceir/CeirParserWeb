@@ -5,20 +5,16 @@
  */
 package com.glocks.parser;
 
-import com.glocks.constants.PropertyReader;
 import com.glocks.dao.SysConfigurationDao;
 import com.glocks.http.HttpURLConnectionExample;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.OutputStreamWriter;
-import java.sql.Connection;
-import java.util.ArrayList;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+import java.io.*;
+import java.sql.Connection;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
 /**
  *
@@ -26,8 +22,6 @@ import org.apache.logging.log4j.Logger;
  */
 public class ErrorFileGenrator {
 
-    static StackTraceElement l = new Exception().getStackTrace()[0];
-    public static PropertyReader propertyReader;
 
     static Logger logger = LogManager.getLogger(ErrorFileGenrator.class);
 
@@ -66,11 +60,11 @@ public class ErrorFileGenrator {
 
                 new HttpURLConnectionExample().redudencyApiConnect(fileName, txn_id, errorPath + txn_id + "/");
             } catch (Exception e) {
-                logger.error("exception at File..." + e);
+                logger.error(e + "in ["+ Arrays.stream(e.getStackTrace()).filter(ste -> ste.getClassName().equals(this.getClass().getName())).collect(Collectors.toList()).get(0) +"]");
             }
 
         } catch (Exception e) {
-            logger.error("Exception ..." + e);
+            logger.error(e + "in ["+ Arrays.stream(e.getStackTrace()).filter(ste -> ste.getClassName().equals(this.getClass().getName())).collect(Collectors.toList()).get(0) +"]");
         }
     }
 
@@ -91,7 +85,7 @@ public class ErrorFileGenrator {
             bw.close();
             new HttpURLConnectionExample().redudencyApiConnect(txn_id + "_error.csv", txn_id, errorPath + txn_id + "/");
         } catch (Exception e) {
-            logger.error("Error + gotoErrorFilewithList " + e);
+            logger.error(e + "in ["+ Arrays.stream(e.getStackTrace()).filter(ste -> ste.getClassName().equals(this.getClass().getName())).collect(Collectors.toList()).get(0) +"]");
         }
     }
 
@@ -110,7 +104,7 @@ public class ErrorFileGenrator {
             bw.close();
             new HttpURLConnectionExample().redudencyApiConnect(txn_id + "_error.csv", txn_id, errorPath + txn_id + "/");
         } catch (Exception e) {
-            logger.error("exception at File..." + e);
+            logger.error(e + "in ["+ Arrays.stream(e.getStackTrace()).filter(ste -> ste.getClassName().equals(this.getClass().getName())).collect(Collectors.toList()).get(0) +"]");
         }
 
     }
@@ -167,9 +161,7 @@ public class ErrorFileGenrator {
         try {
             String currentDirectory = System.getProperty("user.dir");
             String fileNameInput = currentDirectory + "/conf/apiConnectionTag.txt";
-            logger.info("fileNameInput @ apiConnectionErrorFileWriter...." + fileNameInput);
-            logger.info("-- > " + tag);
-            logger.info("-- > " + responseBody);
+            logger.info("FilePath[" + fileNameInput + "]Tag ["+tag +"] ResponseBody ["  + responseBody+"]");
             File fout = new File(fileNameInput);
             FileOutputStream fos = new FileOutputStream(fout, true);
             BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fos));

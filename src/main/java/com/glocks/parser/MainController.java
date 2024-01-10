@@ -6,6 +6,12 @@ import com.glocks.dao.WebActionDbDao;
 import com.glocks.db.ConnectionConfiguration;
 import com.glocks.parser.service.ConsignmentInsertUpdate;
 import com.glocks.parser.service.StolenRecoverBlockUnBlockImpl;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
+import org.springframework.stereotype.Service;
+
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -13,13 +19,9 @@ import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.util.Arrays;
 import java.util.HashMap;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationContext;
-import org.springframework.stereotype.Service;
- 
+import java.util.stream.Collectors;
 
 
 @Service
@@ -29,20 +31,19 @@ public class MainController {
     StolenRecoverBlockUnBlockImpl stolenRecoverBlockUnBlockImpl;
 
     private static final Logger logger = LogManager.getLogger(MainController.class);
-    static StackTraceElement l = new Exception().getStackTrace()[0];
-    public  static String appdbName = null;
+    public static String appdbName = null;
     static String auddbName = null;
     static String repdbName = null;
-   public static String serverName = null;
+    public static String serverName = null;
     static String dateFunction = null;
     public static String ip = null;
     public static PropertyReader propertyReader = null;
     static ConnectionConfiguration connectionConfiguration = null;
     static Connection conn = null;
-    
-    
+
+
     public void loader(ApplicationContext applicationContext) {
-        
+
         propertyReader = (PropertyReader) applicationContext.getBean("propertyReader");
         connectionConfiguration = (ConnectionConfiguration) applicationContext.getBean("connectionConfiguration");
         logger.info("connectionConfiguration :" + connectionConfiguration.getConnection().toString());
@@ -51,11 +52,11 @@ public class MainController {
         appdbName = propertyReader.appdbName;
         auddbName = propertyReader.auddbName;
         repdbName = propertyReader.repdbName;
-         ip = propertyReader.ip;
-         serverName= propertyReader.serverName;
-         
+        ip = propertyReader.ip;
+        serverName = propertyReader.serverName;
+
         logger.info(" MainController");
-      //  Connection conn = new com.glocks.db.MySQLConnection().getConnection();
+        //  Connection conn = new com.glocks.db.MySQLConnection().getConnection();
         String basePath = "";
         String complete_file_path = "";
         String[] rawDataResult = null;
@@ -67,6 +68,7 @@ public class MainController {
         HashMap<String, String> feature_file_mapping = new HashMap<String, String>();
         WebActionDbDao webActionDbDao = new WebActionDbDao();
         SysConfigurationDao sysConfigurationDao = new SysConfigurationDao();
+
         ResultSet file_details = webActionDbDao.getFileDetails(conn, 0, feature);  //select * from web_action_db limit 1
         try {
             while (file_details.next()) {
@@ -91,20 +93,20 @@ public class MainController {
                     }
                 }
                 if (file_details.getString("feature").equalsIgnoreCase("Stolen") && (file_details.getString("sub_feature").equalsIgnoreCase("Approve") || file_details.getString("sub_feature").equalsIgnoreCase("Accept"))) {
-                    stolenRecoverBlockUnBlockImpl.updateDeviceDetailsByTxnId(conn, file_details.getString("txn_id"), "device_lawful_db");
+                    stolenRecoverBlockUnBlockImpl.updateDeviceDetailsByTxnId(conn, file_details.getString("txn_id"), "device_lawful");
                     new ConsignmentInsertUpdate().rawTableCleanUp(conn, file_details.getString("feature"), file_details.getString("txn_id"));
                     webActionDbDao.updateFeatureFileStatus(conn, file_details.getString("txn_id"), 4, file_details.getString("feature"), file_details.getString("sub_feature")); // update web_action_db
                     logger.debug("Web Action 4 done ");
                     break;
                 }
                 if (file_details.getString("feature").equalsIgnoreCase("Stolen") && file_details.getString("sub_feature").equalsIgnoreCase("Reject")) {
-                    stolenRecoverBlockUnBlockImpl.removeDeviceDetailsByTxnId(conn, file_details.getString("txn_id"), "device_lawful_db");
+                    stolenRecoverBlockUnBlockImpl.removeDeviceDetailsByTxnId(conn, file_details.getString("txn_id"), "device_lawful");
                     webActionDbDao.updateFeatureFileStatus(conn, file_details.getString("txn_id"), 4, file_details.getString("feature"), file_details.getString("sub_feature")); // update web_action_db
                     logger.debug("Web Action 4 done ");
                     break;
                 }
                 if (file_details.getString("feature").equalsIgnoreCase("Recovery") && (file_details.getString("sub_feature").equalsIgnoreCase("Approve") || file_details.getString("sub_feature").equalsIgnoreCase("Accept"))) {
-                    stolenRecoverBlockUnBlockImpl.removeDeviceDetailsByTxnId(conn, file_details.getString("txn_id"), "device_lawful_db");
+                    stolenRecoverBlockUnBlockImpl.removeDeviceDetailsByTxnId(conn, file_details.getString("txn_id"), "device_lawful");
                     new ConsignmentInsertUpdate().rawTableCleanUp(conn, file_details.getString("feature"), file_details.getString("txn_id"));
                     webActionDbDao.updateFeatureFileStatus(conn, file_details.getString("txn_id"), 4, file_details.getString("feature"), file_details.getString("sub_feature")); // update web_action_db
                     logger.debug("Web Action 4 done ");
@@ -112,27 +114,27 @@ public class MainController {
 
                 }
                 if (file_details.getString("feature").equalsIgnoreCase("Recovery") && file_details.getString("sub_feature").equalsIgnoreCase("Reject")) {
-                    stolenRecoverBlockUnBlockImpl.updateDeviceDetailsByTxnId(conn, file_details.getString("txn_id"), "device_lawful_db");
+                    stolenRecoverBlockUnBlockImpl.updateDeviceDetailsByTxnId(conn, file_details.getString("txn_id"), "device_lawful");
                     webActionDbDao.updateFeatureFileStatus(conn, file_details.getString("txn_id"), 4, file_details.getString("feature"), file_details.getString("sub_feature")); // update web_action_db
                     logger.debug("Web Action 4 done ");
                     break;
                 }
                 if (file_details.getString("feature").equalsIgnoreCase("Block") && (file_details.getString("sub_feature").equalsIgnoreCase("Approve") || file_details.getString("sub_feature").equalsIgnoreCase("Accept"))) {
-                    stolenRecoverBlockUnBlockImpl.updateDeviceDetailsByTxnId(conn, file_details.getString("txn_id"), "device_operator_db");
+                    stolenRecoverBlockUnBlockImpl.updateDeviceDetailsByTxnId(conn, file_details.getString("txn_id"), "device_operator");
                     new ConsignmentInsertUpdate().rawTableCleanUp(conn, file_details.getString("feature"), file_details.getString("txn_id"));
                     webActionDbDao.updateFeatureFileStatus(conn, file_details.getString("txn_id"), 4, file_details.getString("feature"), file_details.getString("sub_feature")); // update web_action_db
                     logger.debug("Web Action 4 done ");
                     break;
                 }
                 if (file_details.getString("feature").equalsIgnoreCase("Block") && file_details.getString("sub_feature").equalsIgnoreCase("Reject")) {
-                    stolenRecoverBlockUnBlockImpl.removeDeviceDetailsByTxnId(conn, file_details.getString("txn_id"), "device_operator_db");
+                    stolenRecoverBlockUnBlockImpl.removeDeviceDetailsByTxnId(conn, file_details.getString("txn_id"), "device_operator");
                     webActionDbDao.updateFeatureFileStatus(conn, file_details.getString("txn_id"), 4, file_details.getString("feature"), file_details.getString("sub_feature")); // update web_action_db
                     logger.debug("Web Action 4 done ");
                     break;
                 }
 
                 if (file_details.getString("feature").equalsIgnoreCase("Unblock") && (file_details.getString("sub_feature").equalsIgnoreCase("Approve") || file_details.getString("sub_feature").equalsIgnoreCase("Accept"))) {
-                    stolenRecoverBlockUnBlockImpl.removeDeviceDetailsByTxnId(conn, file_details.getString("txn_id"), "device_operator_db");
+                    stolenRecoverBlockUnBlockImpl.removeDeviceDetailsByTxnId(conn, file_details.getString("txn_id"), "device_operator");
                     new ConsignmentInsertUpdate().rawTableCleanUp(conn, file_details.getString("feature"), file_details.getString("txn_id"));
                     webActionDbDao.updateFeatureFileStatus(conn, file_details.getString("txn_id"), 4, file_details.getString("feature"), file_details.getString("sub_feature")); // update web_action_db
                     logger.debug("Web Action 4 done ");
@@ -140,11 +142,10 @@ public class MainController {
 
                 }
                 if (file_details.getString("feature").equalsIgnoreCase("Unblock") && file_details.getString("sub_feature").equalsIgnoreCase("Reject")) {
-                    stolenRecoverBlockUnBlockImpl.updateDeviceDetailsByTxnId(conn, file_details.getString("txn_id"), "device_operator_db");
+                    stolenRecoverBlockUnBlockImpl.updateDeviceDetailsByTxnId(conn, file_details.getString("txn_id"), "device_operator");
                     webActionDbDao.updateFeatureFileStatus(conn, file_details.getString("txn_id"), 4, file_details.getString("feature"), file_details.getString("sub_feature")); // update web_action_db
                     logger.debug("Web Action 4 done ");
                     break;
-
                 }
 
                 if (file_details.getString("feature").equalsIgnoreCase("Update Visa")) {
@@ -153,37 +154,30 @@ public class MainController {
                     break;
                 }
 
-                feature_file_mapping = ceirfunction.getFeatureMapping(conn, file_details.getString("feature"), "NOUSER");  //select * from feature_mapping_db
+                feature_file_mapping = ceirfunction.getFeatureMapping(conn, file_details.getString("feature"), "NOUSER");  //select * from
                 feature_file_management = ceirfunction.getFeatureFileManagement(conn, feature_file_mapping.get("mgnt_table_db"), file_details.getString("txn_id"));   //select * from " + management_db + "
 
                 long diffTime = 0L;
 //                      diffTime = Util.timeDiff(feature_file_management.get("created_on"), feature_file_management.get("modified_on"));
-                logger.info("Time Difference .." + diffTime);
                 if (((file_details.getString("sub_feature").equalsIgnoreCase("Register") || file_details.getString("sub_feature").equalsIgnoreCase("UPLOAD")) && (diffTime != 0))) {
                     logger.debug("  It is Regsiter/Upload and different time" + feature_file_management.get("created_on") + " ||  " + feature_file_management.get("modified_on") + " OR delete Flaag : " + feature_file_management.get("delete_flag"));
                     webActionDbDao.updateFeatureFileStatus(conn, file_details.getString("txn_id"), 4, file_details.getString("feature"), file_details.getString("sub_feature")); // update web_action_db
                     break;
                 }
-                try {     // check it for null
-                    if (file_details.getString("feature").equalsIgnoreCase("CONSIGNMENT") || file_details.getString("feature").equalsIgnoreCase("STOCK")) {
-                        if (file_details.getString("sub_feature").equalsIgnoreCase("REJECT") || file_details.getString("sub_feature").equalsIgnoreCase("DELETE")) {
-                            webActionDbDao.updateFeatureFileStatus(conn, file_details.getString("txn_id"), 2, file_details.getString("feature"), file_details.getString("sub_feature")); // update web_action_db
-                            break;
-                        }
-                    } else {     // optimise
-                        if (feature_file_management.get("delete_flag") == null) {
-                            logger.info("Delete_flag null");
-                        } else {
-                            if (feature_file_management.get("delete_flag").equals("0")) {
-                                logger.debug("  Other Than Stock/Consignment , delete Flag : " + feature_file_management.get("delete_flag"));
-                                webActionDbDao.updateFeatureFileStatus(conn, file_details.getString("txn_id"), 4, file_details.getString("feature"), file_details.getString("sub_feature")); // update web_action_db
-                                break;
-                            }
-                        }
+                // check it for null
+                if (file_details.getString("feature").equalsIgnoreCase("CONSIGNMENT") || file_details.getString("feature").equalsIgnoreCase("STOCK")) {
+                    if (file_details.getString("sub_feature").equalsIgnoreCase("REJECT") || file_details.getString("sub_feature").equalsIgnoreCase("DELETE")) {
+                        webActionDbDao.updateFeatureFileStatus(conn, file_details.getString("txn_id"), 2, file_details.getString("feature"), file_details.getString("sub_feature")); // update web_action_db
+                        break;
                     }
-                } catch (Exception e) {
-                    logger.error("" + l.getClassName() + "/" + l.getMethodName() + ":" + l.getLineNumber() + e);
+                } else {     // optimise other than stock consignment , need to check delete flag
+                    if (feature_file_management.get("delete_flag") != null && feature_file_management.get("delete_flag").equals("0")) {
+                        logger.debug("  Other Than Stock/Consignment , delete Flag : " + feature_file_management.get("delete_flag"));
+                        webActionDbDao.updateFeatureFileStatus(conn, file_details.getString("txn_id"), 4, file_details.getString("feature"), file_details.getString("sub_feature")); // update web_action_db
+                        break;
+                    }
                 }
+
 
                 String errFilEpath = sysConfigurationDao.getTagValue(conn, "system_error_filepath");
                 String error_file_path = errFilEpath + file_details.getString("txn_id") + "/" + file_details.getString("txn_id") + "_error.csv";
@@ -194,7 +188,7 @@ public class MainController {
                     if (!errorfile.exists()) {
                         errorfile.mkdir();
                     }
-                    logger.debug("MKdir Done ");
+                    logger.debug("directory created");
                     Path temp = Files.move(Paths.get(error_file_path),
                             Paths.get(errFilEpath + file_details.getString("txn_id") + "/old/" + file_details.getString("txn_id") + "_" + java.time.LocalDateTime.now() + "_P1_error.csv"));
                     if (temp != null) {
@@ -220,15 +214,14 @@ public class MainController {
                     if (f.exists()) {
                         logger.info(" File Exists ");
                     } else {
-                        try {
-                            String query = "update "+appdbName+".web_action_db set state=" + 0 + " ,  retry_count = retry_count +1   where    txn_id='" + file_details.getString("txn_id") + "' and feature='" + file_details.getString("feature")
-                                    + "' and sub_feature='" + file_details.getString("sub_feature") + "' ";
-                            Statement stmt = conn.createStatement();
-                            stmt.executeUpdate(query);
-                            logger.info(" [ " + query + "]");
-                        } catch (Exception e) {
-                            logger.info("errror" + e);
-                        }
+                        logger.info(" File Not found at " + complete_file_path);
+
+                        String query = "update " + appdbName + ".web_transaction_detail set state=" + 0 + " ,  retry_count = retry_count +1   where    txn_id='" + file_details.getString("txn_id") + "' and feature='" + file_details.getString("feature")
+                                + "' and sub_feature='" + file_details.getString("sub_feature") + "' ";
+                        Statement stmt = conn.createStatement();
+                        stmt.executeUpdate(query);
+                        logger.info(" [ " + query + "]");
+
                         return;
                     }
 
@@ -264,7 +257,7 @@ public class MainController {
             }
 //               raw_upload_set_no = 1;
         } catch (Exception e) {
-            logger.error("" + l.getClassName() + "/" + l.getMethodName() + ":" + l.getLineNumber() + e);
+            logger.error(e + "in [" + Arrays.stream(e.getStackTrace()).filter(ste -> ste.getClassName().equals(this.getClass().getName())).collect(Collectors.toList()).get(0) + "]");
             try {
                 if (conn != null) {
                     conn.rollback();
@@ -274,24 +267,19 @@ public class MainController {
                 new WebActionDbDao().updateFeatureFileStatus(conn, file_details.getString("txn_id"), 5, file_details.getString("feature"), file_details.getString("sub_feature")); // update web_action_db
                 conn.commit();
             } catch (Exception e1) {
-                logger.error("" + l.getClassName() + "/" + l.getMethodName() + ":" + l.getLineNumber() + e1);
+                logger.error(e + "in [" + Arrays.stream(e.getStackTrace()).filter(ste -> ste.getClassName().equals(this.getClass().getName())).collect(Collectors.toList()).get(0) + "]");
             }
         } finally {
-            try {
-                CEIRFeatureFileParser.cEIRFeatureFileParser(conn, feature);
-            } catch (Exception e) {
-                logger.error("" + l.getClassName() + "/" + l.getMethodName() + ":" + l.getLineNumber() + e);
-            }
+            CEIRFeatureFileParser.cEIRFeatureFileParser(conn, feature);
         }
     }
 
-    static void getFinalDetailValues(Connection conn, String complete_file_path, String outputDb, String txn_id, String feature, String sub_feature) {
+    void getFinalDetailValues(Connection conn, String complete_file_path, String outputDb, String txn_id, String feature, String sub_feature) {
         ResultSet rs = null;
         Statement stmt = null;
         String query = null;
-        CEIRFeatureFileFunctions ceirfunction = new CEIRFeatureFileFunctions();
         try {
-            query = "select count(*) as cont from  "+appdbName+"." + feature + "_raw  where txn_id ='" + txn_id + "'";
+            query = "select count(*) as cont from  " + appdbName + "." + feature + "_temp_data  where txn_id ='" + txn_id + "'";
             logger.info("Query is " + query);
             stmt = conn.createStatement();
             rs = stmt.executeQuery(query);
@@ -299,7 +287,6 @@ public class MainController {
             while (rs.next()) {
                 dbCount = rs.getInt("cont");
             }
-
             Path path = Paths.get(complete_file_path);
             long lineCount = Files.lines(path).count();         //  if space is their , it fails
             logger.info("lineCount from File  is " + lineCount);
@@ -308,16 +295,14 @@ public class MainController {
                 new WebActionDbDao().updateFeatureFileStatus(conn, txn_id, 2, feature, sub_feature);
                 logger.info("Web action 2   done");
             } else {
-                query = "delete from   "+appdbName+"." + outputDb + " where txn_id ='" + txn_id + "'";
+                query = "delete from   " + appdbName + "." + outputDb + " where txn_id ='" + txn_id + "'";
                 logger.info(query);
                 stmt.executeQuery(query);
                 new WebActionDbDao().updateFeatureFileStatus(conn, txn_id, 0, feature, sub_feature);
                 logger.info("Web action 0   done");
             }
-
         } catch (Exception e) {
-            logger.error("" + l.getClassName() + "/" + l.getMethodName() + ":" + l.getLineNumber() + e);
-
+            logger.error(e + "in [" + Arrays.stream(e.getStackTrace()).filter(ste -> ste.getClassName().equals(this.getClass().getName())).collect(Collectors.toList()).get(0) + "]");
         }
 
     }
@@ -340,4 +325,14 @@ public class MainController {
 //                    logger.info("File not exists.... ");
 //                    hfr.readFeatureWithoutFile(conn, file_details.getString("feature"), raw_upload_set_no, file_details.getString("txn_id"), file_details.getString("sub_feature"), feature_file_mapping.get("mgnt_table_db"), user_type);
 //                }
-
+//private void sampleStatementExexute(Connection conn) {
+//    try (Statement st = conn.createStatement()) {
+//        for (int i = 0; i < 100; i++) {
+//            st.executeQuery("Update STOLEN_TEMP_DATA set DEVICE_TYPE='Phone'");
+//            var rs = st.executeQuery("select id from ACTIVE_UNIQUE_IMEI where id =" + i);
+//            while (rs.next()) logger.info("ID is: " + rs.getString(1));
+//        }
+//    } catch (Exception e) {
+//        logger.error(e + "Error " + e.getMessage());
+//    }
+//}

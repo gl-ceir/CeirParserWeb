@@ -1,10 +1,10 @@
-<Configuration status="INFO">
+<Configuration status="INFO" shutdownHook="disable">
     <Appenders>
         <Console name="ConsoleAppender" target="SYSTEM_OUT">
-            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] [%C{1}][%F][%M()]  %-5level :%L - %msg%n" />
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} %-5level [%C{1}][%F][%M()] :%L - %msg%n" />
         </Console>
-        <File name="FileAppender" fileName="/home/maverick/glocks/extras/logs/log${date:yyyyMMdd}.log" immediateFlush="false" append="true">
-            <PatternLayout pattern="%d{yyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} :%L - %msg%n"/>
+        <File name="FileAppender" fileName="/home/sachin/Glocks/extras/logs/WebParserlog${date:yyyyMMdd}.log" immediateFlush="false" append="true">
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} %-5level [%C{1}][%F][%M()] :%L - %msg%n"/>
         </File>
 
     </Appenders>

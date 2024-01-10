@@ -1,17 +1,15 @@
 package com.glocks.http;
 
 import com.glocks.parser.ErrorFileGenrator;
-import static com.glocks.parser.MainController.ip;
-import static com.glocks.parser.MainController.serverName;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.URL;
+
+import static com.glocks.parser.MainController.ip;
+import static com.glocks.parser.MainController.serverName;
 
 public class HttpURLConnectionExample {
 
@@ -122,7 +120,7 @@ public class HttpURLConnectionExample {
 
     public void redudencyApiConnect(String fileName, String txn_id, String fileNameInput) {
 
-        String tag = "http://$LOCAL_IP:9502/CEIR/uploadedFile/save";
+        String tag = "http://$LOCAL_IP:9502/CEIR/uploadedFile/save";  // fileCopyApi
         logger.info("  uploadedFile tag  " + tag);
 
         tag = tag.replace("$LOCAL_IP", ip);
@@ -163,7 +161,7 @@ public class HttpURLConnectionExample {
             }
             String result = sb.toString();
             in.close();
-            logger.info("OUTPUT result is .." + result);
+            logger.info("Output result is .." + result);
         } catch (Exception e) {
             logger.error(responseBody + "  " + e);
             new ErrorFileGenrator().apiConnectionErrorFileWriter(tag, responseBody);

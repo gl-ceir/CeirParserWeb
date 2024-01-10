@@ -4,12 +4,14 @@
  */
 package com.glocks.dao;
 
-import static com.glocks.parser.MainController.appdbName;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+
+import static com.glocks.parser.MainController.appdbName;
 
 
 
@@ -22,35 +24,17 @@ public class BrandModelDbDao {
 
     Logger logger = LogManager.getLogger(BrandModelDbDao.class);
 
-    public void updateModelBrandNameByTxnId(Connection conn, String txnId, String TableName) {
-
+    public void updateModelBrandNameByTxnId(Connection conn, String txnId, String TableName) { // need to check
         String query = " select tac from  "+appdbName+"." + TableName + " where  txn_id =   '" + txnId + "'   ";
-        Statement stmt = null;
-        Statement stmt2 = null;
-        logger.info("tac       ...[" + query + "]");
-        ResultSet rs = null;
-        try {
-            stmt = conn.createStatement();
-            stmt2 = conn.createStatement();
-            rs = stmt.executeQuery(query);
+        try( Statement stmt = conn.createStatement();ResultSet rs = stmt.executeQuery(query); ) {
             while (rs.next()) {
-                String updtQry = " update  "+appdbName+"." + TableName + " set model_name = (select  model_name_new  from "+appdbName+".gsma_tac_db where device_id = '" + rs.getString("tac") + "'  ) "
-                        + " ,   brand_name = ( select brand_name_new  from "+appdbName+".gsma_tac_db where device_id = '" + rs.getString("tac") + "' )    where tac =   '" + rs.getString("tac") + "'  ";
+                String updtQry = " update  "+appdbName+"." + TableName + " set model_name = (select  model_name  from "+appdbName+".gsma_tac_details where tac = '" + rs.getString("tac") + "'  ) "
+                        + " ,   brand_name = ( select brand_name  from "+appdbName+".gsma_tac_details where tac = '" + rs.getString("tac") + "' )    where tac =   '" + rs.getString("tac") + "'  ";
                 logger.info(updtQry);
-                stmt2.executeUpdate(updtQry);
+                stmt.executeUpdate(updtQry);
             }
-        } catch (Exception e) {
+        }catch (Exception e) {
             logger.info("Error" + e);
-        } finally {
-            try {
-                rs.close();
-                stmt.close();
-                stmt2.close();
-                conn.commit();
-
-            } catch (Exception e) {
-                logger.error("" + e);
-            }
         }
 
     }

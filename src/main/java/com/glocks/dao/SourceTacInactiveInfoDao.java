@@ -1,12 +1,13 @@
 package com.glocks.dao;
 
-import static com.glocks.parser.MainController.appdbName;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+
+import static com.glocks.parser.MainController.appdbName;
 
 public class SourceTacInactiveInfoDao {
 
@@ -15,45 +16,27 @@ public class SourceTacInactiveInfoDao {
 
     public int deleteFromSourceTacInactiveInfo(Connection conn, String txnId) {
         String query = "";
-        Statement stmt = null;
         int executeStatus = 0;
 
         query = "delete from "+appdbName+".source_tac_inactive_info where txn_id='" + txnId + "'";
         logger.info("delete source_tac_inactive_info [" + query + "]");
-        // System.out.println("delete device_importer_db ["+query+"]");
-
-        try {
-            stmt = conn.createStatement();
+        try( Statement stmt = conn.createStatement(); ) {
             executeStatus = stmt.executeUpdate(query);
         } catch (SQLException e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                stmt.close();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
+            logger.error(e.getMessage());
         }
         return executeStatus;
     }
 
     public void insertSourceTac(Connection conn, String tac, String txnFile, Long tacCount, String dbName) {
-        Statement stmt = null;
         logger.info("tacCount " + tacCount);
-        String raw_query = "insert into "+appdbName+"." + dbName + "(tac , TXN_ID, RECORD_COUNT   ) "
+        String query = "insert into "+appdbName+"." + dbName + "(tac , txn_id, record_count ) "
                 + "  values('" + tac + "', '" + txnFile + "', " + tacCount + " )";
-        try {
-            logger.info(" " + raw_query);
-            stmt = conn.createStatement();
-            stmt.executeUpdate(raw_query);
+        try( Statement stmt = conn.createStatement(); ){
+            logger.info(" " + query);
+            stmt.executeUpdate(query);
         } catch (Exception e) {
-            logger.warn("  " + e);
-        } finally {
-            try {
-                stmt.close();
-            } catch (SQLException ex) {
-                org.apache.logging.log4j.LogManager.getLogger(SourceTacInactiveInfoDao.class.getName());
-            }
+            logger.error(e.getMessage());
         }
     }
 }

@@ -1,15 +1,17 @@
 package com.glocks.dao;
 
-import static com.glocks.parser.MainController.appdbName;
 import com.glocks.pojo.DeviceDb;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.LinkedList;
 import java.util.List;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+
+import static com.glocks.parser.MainController.appdbName;
 
 public class DeviceDbDao {
 
@@ -24,7 +26,7 @@ public class DeviceDbDao {
           List<DeviceDb> deviceDbs = new LinkedList<>();
           try {
                query = "select id, created_on, modified_on, device_type, device_id_type, "
-                       + "multiple_sim_status, sn_of_device, imei_esn_meid, DEVICE_LAUNCH_DATE as launch_date, "
+                       + "mul_sim_status, sno_of_device, imei_esn_meid, DEVICE_LAUNCH_DATE as launch_date, "
                        + "device_status, tac, period, txn_id, state, feature_name "
                        + "from "+appdbName+".device_db "
                        + "where txn_id='" + txnId + "'";
@@ -38,8 +40,8 @@ public class DeviceDbDao {
 //				 // System.out.println("Inside while of device_db.");		
 
                     deviceDbs.add(new DeviceDb(rs.getLong("id"), 0, rs.getString("created_on"), rs.getString("modified_on"),
-                            rs.getString("device_type"), rs.getString("device_id_type"), rs.getString("multiple_sim_status"),
-                            rs.getString("sn_of_device"), rs.getString("imei_esn_meid"), rs.getString("launch_date"),
+                            rs.getString("device_type"), rs.getString("device_id_type"), rs.getString("mul_sim_status"),
+                            rs.getString("sno_of_device"), rs.getString("imei_esn_meid"), rs.getString("launch_date"),
                             rs.getString("device_status"), rs.getInt("tac"), rs.getString("period"), rs.getString("txn_id"),
                             rs.getInt("state"), rs.getString("feature_name")));
                }

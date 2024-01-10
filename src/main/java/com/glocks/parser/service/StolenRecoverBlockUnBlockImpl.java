@@ -5,24 +5,24 @@
 package com.glocks.parser.service;
 
 import com.glocks.dao.BrandModelDbDao;
-import static com.glocks.parser.MainController.appdbName;
-
-
-
-
 import com.glocks.dao.SysConfigurationDao;
 import com.glocks.parser.CEIRFeatureFileParser;
 import com.glocks.util.Util;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.springframework.stereotype.Service;
+
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.HashMap;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.springframework.stereotype.Service;
+import java.util.stream.Collectors;
+
+import static com.glocks.parser.MainController.appdbName;
 
 /**
  *
@@ -32,7 +32,6 @@ import org.springframework.stereotype.Service;
 public class StolenRecoverBlockUnBlockImpl {
 
     public static Logger logger = LogManager.getLogger(StolenRecoverBlockUnBlockImpl.class);
-    static StackTraceElement l = new Exception().getStackTrace()[0];
 
     public void removeDeviceDetailsByTxnId(Connection conn, String txn_id, String tableName) {
         Statement stmt = null;
@@ -41,7 +40,7 @@ public class StolenRecoverBlockUnBlockImpl {
         Statement stmt3 = null;
         Statement stmt4 = null;
         ResultSet rs = null;
-//          String rawTable =  tableName == "device_lawful_db" ? "Recovery" : "Unblock" ;
+//          String rawTable =  tableName == "device_lawful" ? "Recovery" : "Unblock" ;
         String expdate = getExpiryDateValue(conn, txn_id);
         CEIRFeatureFileParser cEIRFeatureFileParser = new CEIRFeatureFileParser();
         HashMap<String, String> stolnRcvryDetails = getStolenRecvryDetails(conn, txn_id);   //IMEI_ESN_MEID
@@ -53,12 +52,13 @@ public class StolenRecoverBlockUnBlockImpl {
 //                  + "and  SN_OF_DEVICE is not null)  union  select   imei_esn_meid   , user_id "
 //                  + "from   " + tableName + " where  TXN_ID = '" + txn_id + "'  "
 //                  + "and  SN_OF_DEVICE is null  ";
-        String query = " select actual_imei,  imei_esn_meid , user_id , DEVICE_ID_type  , DEVICE_TYPE  from   "+appdbName+"." + tableName + "  where SN_OF_DEVICE in (   select SN_OF_DEVICE from   "+appdbName+"." + tableName + " where imei_esn_meid in "
-                + "(select SUBSTR( IMEIESNMEID, 1,14)    from  "+appdbName+"." + stolnRcvryDetails.get("reason") + "_raw  where  TXN_ID =  '" + txn_id + "'   ) "
-                + "  and  SN_OF_DEVICE is not null and SN_OF_DEVICE != 'null' )      "
+        String query = " select actual_imei,  imei_esn_meid , user_id , device_id_type  , device_type  from   "+appdbName+"." + tableName + "  where sno_of_device in (   select sno_of_device from   "+appdbName+"." + tableName + " where imei_esn_meid in "
+                + "(select SUBSTR( imei_esn_meid, 1,14)    from  "+appdbName+"." + stolnRcvryDetails.get("reason") + "_temp_data  where  TXN_ID =  '" + txn_id + "'   ) "
+                + "  and  sno_of_device is not null and sno_of_device != 'null' )      "
                 + "  UNION      select actual_imei,  imei_esn_meid   , user_id , DEVICE_ID_type  , DEVICE_TYPE  from    "+appdbName+"." + tableName + "  "
-                + " where imei_esn_meid  in  ( select  SUBSTR( IMEIESNMEID, 1,14)    from  "+appdbName+"." + stolnRcvryDetails.get("reason") + "_raw where  TXN_ID =  '" + txn_id + "'   )    and   SN_OF_DEVICE =  'null'   ";
+                + " where imei_esn_meid  in  ( select  SUBSTR( imei_esn_meid, 1,14)    from  "+appdbName+"." + stolnRcvryDetails.get("reason") + "_temp_data where  txn_id =  '" + txn_id + "'   )    and   sno_of_device =  'null'   ";
 //           query = "select imei_esn_meid , user_id  from  " + tableName + "  where txn_id =   ";
+
         logger.info(" ..:::   " + query);
         try {
             stmt1 = conn.createStatement();
@@ -69,14 +69,14 @@ public class StolenRecoverBlockUnBlockImpl {
             rs = stmt.executeQuery(query);
             while (rs.next()) {
 
-                query = "insert into   "+appdbName+".greylist_db_history ( EXPIRY_DATE, modified_on ,  created_on , imei, user_id , txn_id , mode_type  , request_type, user_type  , complain_type ,operation    , operator_id , operator_name  ,actual_imei , DEVICE_ID_type  , DEVICE_TYPE  )   "
+                query = "insert into   "+appdbName+".grey_list_history ( EXPIRY_DATE, modified_on ,  created_on , imei, user_id , txn_id , mode_type  , request_type, user_type  , complain_type ,operation    , operator_id , operator_name  ,actual_imei , DEVICE_ID_type  , DEVICE_TYPE  )   "
                         + "values(   " + expdate + " , " + dateFunction + ",   " + dateFunction + ",    " + "'" + rs.getString("imei_esn_meid")
                         + "'," + " ( select username from users where users.id=  "
                         + rs.getString("user_id") + "  )  ,  " + " '" + txn_id + "', " + "'"
                         + stolnRcvryDetails.get("source") + "'," + "'" + stolnRcvryDetails.get("reason") + "',"
-                        + " ( select USERTYPE_NAME from "+appdbName+".usertype  where ID = (select  usertype_id from users where id =  " + rs.getString("user_id") + "  ) )   ," + "'"
+                        + " ( select USER_TYPE_NAME from "+appdbName+".user_type  where ID = (select  user_type_id from users where id =  " + rs.getString("user_id") + "  ) )   ," + "'"
                         + stolnRcvryDetails.get("complaint_type") + "' ,"
-                        + "  1    , (select OPERATOR_TYPE_ID  from "+appdbName+".user_profile where USERID =   " + rs.getString("user_id") + "  )  , (select OPERATOR_TYPE_NAME  from "+appdbName+".user_profile where USERID =   " + rs.getString("user_id") + "  ) , '" + rs.getString("actual_imei") + "'  , '" + rs.getString("device_id_type") + "'  , '" + rs.getString("device_type") + "'         )";
+                        + "  1    , (select OPERATOR_TYPE_ID  from "+appdbName+".user_profile where USER_ID =   " + rs.getString("user_id") + "  )  , (select OPERATOR_TYPE_NAME  from "+appdbName+".user_profile where USER_ID =   " + rs.getString("user_id") + "  ) , '" + rs.getString("actual_imei") + "'  , '" + rs.getString("device_id_type") + "'  , '" + rs.getString("device_type") + "'         )";
 
                 logger.info(" ..:::: " + query);
                 stmt1.executeUpdate(query);
@@ -93,8 +93,8 @@ public class StolenRecoverBlockUnBlockImpl {
                 }
 
                 try {
-                    query = "delete from "+appdbName+".greylist_db where imei  = '" + rs.getString("imei_esn_meid") + "' ";
-                    logger.info(" ___ " + query);
+                    query = "delete from "+appdbName+".grey_list where imei  = '" + rs.getString("imei_esn_meid") + "' ";
+                    logger.info("  " + query);
                     stmt3.executeUpdate(query);
 
                 } catch (Exception e) {
@@ -108,7 +108,6 @@ public class StolenRecoverBlockUnBlockImpl {
                 } catch (Exception e) {
                     logger.error(" .. $$ :" + e);
                 }
-
             }
             rs.close();
             stmt.close();
@@ -116,14 +115,14 @@ public class StolenRecoverBlockUnBlockImpl {
             stmt2.close();
             stmt3.close();
             stmt4.close();
+            logger.info("Query Completed " );
             conn.commit();
         } catch (Exception e) {
-            logger.error(" ..1:" + e);
+            logger.error(e + "in ["+ Arrays.stream(e.getStackTrace()).filter(ste -> ste.getClassName().equals(this.getClass().getName())).collect(Collectors.toList()).get(0) +"]");
         }
-
     }
 
-    private static String getExpiryDateValue(Connection conn, String txnId) {
+    private  String getExpiryDateValue(Connection conn, String txnId) {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
         Calendar cal = Calendar.getInstance();
         Statement stmt = null;
@@ -134,7 +133,7 @@ public class StolenRecoverBlockUnBlockImpl {
         String defaultDays = null;
         try {
             stmt = conn.createStatement();
-            String qry = "select BLOCKING_TYPE , BLOCKING_TIME_PERIOD  from "+appdbName+".stolenand_recovery_mgmt where  txn_id  = '" + txnId + "' ";
+            String qry = "select BLOCKING_TYPE , BLOCKING_TIME_PERIOD  from "+appdbName+".stolen_and_recovery_txn where  txn_id  = '" + txnId + "' ";
             logger.info("" + qry);
             rs = stmt.executeQuery(qry);
             while (rs.next()) {
@@ -143,12 +142,7 @@ public class StolenRecoverBlockUnBlockImpl {
             }
             logger.info("BLOCKING_TYPE " + BLOCKING_TYPE);
             if (BLOCKING_TYPE.equalsIgnoreCase("default")) {
-//                rs = stmt.executeQuery("select value from sys_param where tag = ''   ");
-//                while (rs.next()) {
-//                    defaultDays = rs.getString("value");
-//                }
                 defaultDays = new SysConfigurationDao().getTagValue(conn, "GREY_TO_BLACK_MOVE_PERIOD_IN_DAY");
-
                 logger.info(" defaultDays " + defaultDays);
                 cal.add(Calendar.DAY_OF_MONTH, Integer.parseInt(defaultDays));
                 finalDate = sdf.format(cal.getTime());
@@ -161,12 +155,16 @@ public class StolenRecoverBlockUnBlockImpl {
             logger.info(" finalDate " + finalDate);
 
         } catch (Exception e) {
-            logger.error(e);
+            logger.error(e + "in ["+ Arrays.stream(e.getStackTrace()).filter(ste -> ste.getClassName().equals(this.getClass().getName())).collect(Collectors.toList()).get(0) +"]");
         }
-        return "TO_DATE('" + finalDate + "','YYYY-MM-DD HH24:MI:SS')";
+        if(conn.toString().contains("oracle")){
+            return "TO_DATE('" + finalDate + "','YYYY-MM-DD HH24:MI:SS')";
+        }else{
+            return finalDate;
+        }
     }
 
-    public static HashMap<String, String> getStolenRecvryDetails(Connection conn, String txn_id) {
+    public   HashMap<String, String> getStolenRecvryDetails(Connection conn, String txn_id) {
         HashMap<String, String> map = new HashMap<String, String>();
         String errorFilePath = "";
         String query = null;
@@ -185,7 +183,7 @@ public class StolenRecoverBlockUnBlockImpl {
         String user_id = null;
 
         try {
-            query = "select request_type ,source_type  ,complaint_type  ,txn_id ,user_id from "+appdbName+".stolenand_recovery_mgmt   where txn_id = '"
+            query = "select request_type ,source_type  ,complaint_type  ,txn_id ,user_id from "+appdbName+".stolen_and_recovery_txn   where txn_id = '"
                     + txn_id + "'";
             logger.info("Query   " + query);
             stmt = conn.createStatement();
@@ -197,8 +195,8 @@ public class StolenRecoverBlockUnBlockImpl {
                 txnId = rs1.getString("txn_id");
                 user_id = rs1.getString("user_id");
             }
-        } catch (Exception ex) {
-            ex.printStackTrace();
+        } catch (Exception e) {
+            logger.error(e + "in ["+ Arrays.stream(e.getStackTrace()).filter(ste -> ste.getClassName().equals(this.getClass().getName())).collect(Collectors.toList()).get(0) +"]");
         } finally {
             try {
                 stmt.close();
@@ -276,9 +274,9 @@ public class StolenRecoverBlockUnBlockImpl {
         stolnRcvryDetails = getStolenRecvryDetails(conn, txnId);   //IMEI_ESN_MEID
 //          String dfnc =;   // "+ Util.defaultDateNow(true) +"
 
-        String query = "update "+appdbName+"." + TableName + " set DEVICE_STATUS  = 'Approved' , modified_on =    " + Util.defaultDateNow(true) + " "
+        String query = "update "+appdbName+"." + TableName + " set device_status  = 'Approved' , modified_on =  CURRENT_TIMESTAMP "
                 + " where actual_imei  in   "
-                + "(select       IMEIESNMEID   from  "+appdbName+"." + stolnRcvryDetails.get("reason") + "_raw  where  TXN_ID =  '" + txnId + "'   ) "
+                + "(select imei_esn_meid   from  "+appdbName+"." + stolnRcvryDetails.get("reason") + "_temp_data  where  txn_id =  '" + txnId + "'   ) "
                 + "   ";
         Statement stmt = null;
         logger.info("update   as  APPROVED  ...[" + query + "]");
@@ -287,19 +285,19 @@ public class StolenRecoverBlockUnBlockImpl {
             stmt = conn.createStatement();
             stmt.executeUpdate(query);
         } catch (Exception e) {
-            logger.info("Error" + e);
+            logger.error(e + "in ["+ Arrays.stream(e.getStackTrace()).filter(ste -> ste.getClassName().equals(this.getClass().getName())).collect(Collectors.toList()).get(0) +"]");
         } finally {
             try {
                 stmt.close();
                 conn.commit();
                 new BrandModelDbDao().updateModelBrandNameByTxnId(conn, txnId, TableName);
             } catch (Exception e) {
-                logger.error("" + e);
+                logger.error(e + "in ["+ Arrays.stream(e.getStackTrace()).filter(ste -> ste.getClassName().equals(this.getClass().getName())).collect(Collectors.toList()).get(0) +"]");
             }
         }
     }
 
-    public static void insertInGreyListByTxnId(Connection conn, String txnId, String tableName) {
+    public   void insertInGreyListByTxnId(Connection conn, String txnId, String tableName) {
         ResultSet rs = null;
         String expdate = getExpiryDateValue(conn, txnId);
 
@@ -316,8 +314,8 @@ public class StolenRecoverBlockUnBlockImpl {
 //                + "  UNION      select actual_imei,  imei_esn_meid   , user_id , DEVICE_ID_TYPE , DEVICE_TYPE from    " + tableName + "  "
 //                + " where actual_imei  in  ( select IMEIESNMEID from  " + stolnRcvryDetails.get("reason") + "_raw where  TXN_ID =  '" + txnId + "'   )    and   SN_OF_DEVICE =  'null'   ";
 
-        String query = " select actual_imei, imei_esn_meid , user_id , DEVICE_ID_TYPE , DEVICE_TYPE  from   "+appdbName+"." + tableName + " "
-                + "  where   actual_imei     in (select IMEIESNMEID  from "+appdbName+"." + stolnRcvryDetails.get("reason") + "_raw  where  TXN_ID =   '" + txnId + "'   )  ";
+        String query = " select actual_imei, imei_esn_meid , user_id , device_id_type , device_type from   "+appdbName+"." + tableName + " "
+                + "  where   actual_imei     in (select imei_esn_meid  from "+appdbName+"." + stolnRcvryDetails.get("reason") + "_temp_data  where  txn_id =   '" + txnId + "'   )  ";
 
         logger.info(" ...[" + query + "]");
         String device_greylist_db_qry = null;
@@ -332,40 +330,33 @@ public class StolenRecoverBlockUnBlockImpl {
             while (rs.next()) {
 //                    {
 //                         if (stolnRcvryDetails.get("operation").equals("0")) {
-                device_greylist_db_qry = "insert into   "+appdbName+".greylist_db (EXPIRY_DATE,created_on ,modified_on , imei, user_id , txn_id , mode_type  , request_type, user_type  , complain_type , operator_id , operator_name ,actual_imei , DEVICE_ID_type  , DEVICE_TYPE  )   "
+                device_greylist_db_qry = "insert into   "+appdbName+".grey_list (EXPIRY_DATE,created_on ,modified_on , imei, user_id , txn_id , mode_type  , request_type, user_type  , complain_type , operator_id , operator_name ,actual_imei , DEVICE_ID_type  , DEVICE_TYPE  )   "
                         + "values(  " + expdate + "    ,  " + dateFunction + ",    " + dateFunction + "," + "'" + rs.getString("imei_esn_meid")
                         + "'," + " ( select username from "+appdbName+".users where users.id=  "
                         + rs.getString("user_id") + "  )  ,  " + " '" + txnId + "', " + "'"
                         + stolnRcvryDetails.get("source") + "'," + "'" + stolnRcvryDetails.get("reason")
-                        + "'," + "   ( select USERTYPE_NAME from "+appdbName+".usertype  where ID = (select  usertype_id from "+appdbName+".users where id =  " + rs.getString("user_id") + "  ) )     ," + "'"
-                        + stolnRcvryDetails.get("complaint_type") + "' , (select OPERATOR_TYPE_ID  from "+appdbName+".user_profile where USERID =   " + rs.getString("user_id") + "  )  , (select OPERATOR_TYPE_NAME  from "+appdbName+".user_profile where USERID =   " + rs.getString("user_id") + "  )   , '" + rs.getString("actual_imei") + "' , '" + rs.getString("device_id_type") + "'  , '" + rs.getString("device_type") + "'        )";
+                        + "'," + "   ( select USER_TYPE_NAME from "+appdbName+".user_type  where ID = (select  user_type_id from "+appdbName+".users where id =  " + rs.getString("user_id") + "  ) )     ," + "'"
+                        + stolnRcvryDetails.get("complaint_type") + "' , (select OPERATOR_TYPE_ID  from "+appdbName+".user_profile where USER_ID =   " + rs.getString("user_id") + "  )  , (select OPERATOR_TYPE_NAME  from "+appdbName+".user_profile where USER_ID =   " + rs.getString("user_id") + "  )   , '" + rs.getString("actual_imei") + "' , '" + rs.getString("device_id_type") + "'  , '" + rs.getString("device_type") + "'        )";
 //                         }
-                device_greylist_History_db_qry = "insert into   "+appdbName+".greylist_db_history ( EXPIRY_DATE,modified_on ,  created_on , imei, user_id , txn_id , mode_type  , request_type, user_type  , complain_type ,operation  ,   operator_id , operator_name ,actual_imei  , DEVICE_ID_type  , DEVICE_TYPE  )   "
+                device_greylist_History_db_qry = "insert into   "+appdbName+".grey_list_history ( EXPIRY_DATE,modified_on ,  created_on , imei, user_id , txn_id , mode_type  , request_type, user_type  , complain_type ,operation  ,   operator_id , operator_name ,actual_imei  , DEVICE_ID_type  , DEVICE_TYPE  )   "
                         + "values(   " + expdate + " ,  " + dateFunction + ",       " + dateFunction + "," + "'" + rs.getString("imei_esn_meid")
                         + "'," + " ( select username from "+appdbName+".users where users.id=  "
                         + rs.getString("user_id") + "  )  ,  " + " '" + txnId + "', " + "'"
                         + stolnRcvryDetails.get("source") + "'," + "'" + stolnRcvryDetails.get("reason") + "',"
-                        + "  ( select USERTYPE_NAME from "+appdbName+".usertype  where ID = (select  usertype_id from "+appdbName+".users where id =  " + rs.getString("user_id") + "  ) )     ," + "'"
+                        + "  ( select USER_TYPE_NAME from "+appdbName+".user_type  where ID = (select  user_type_id from "+appdbName+".users where id =  " + rs.getString("user_id") + "  ) )     ," + "'"
                         + stolnRcvryDetails.get("complaint_type") + "' , "
-                        + " 0   , (select OPERATOR_TYPE_ID  from "+appdbName+".user_profile where USERID =   " + rs.getString("user_id") + "  )  , (select OPERATOR_TYPE_NAME  from "+appdbName+".user_profile where USERID =   " + rs.getString("user_id") + "  )  , '" + rs.getString("actual_imei") + "' , '" + rs.getString("device_id_type") + "'  , '" + rs.getString("device_type") + "'   )";
+                        + " 0   , (select OPERATOR_TYPE_ID  from "+appdbName+".user_profile where USER_ID =   " + rs.getString("user_id") + "  )  , (select OPERATOR_TYPE_NAME  from "+appdbName+".user_profile where USER_ID =   " + rs.getString("user_id") + "  )  , '" + rs.getString("actual_imei") + "' , '" + rs.getString("device_id_type") + "'  , '" + rs.getString("device_type") + "'   )";
+
                 logger.info(" " + device_greylist_db_qry);
-                try {
                     stmt1.executeUpdate(device_greylist_db_qry);
-                } catch (Exception e) {
-//                         logger.error(" . " + e);
-                }
                 logger.info("" + device_greylist_History_db_qry);
-                try {
                     stmt2.executeUpdate(device_greylist_History_db_qry);
-                } catch (Exception e) {
-                    logger.error(" .histry  " + e);
-                }
 
 //                    }
             }
             rs.close();
         } catch (Exception e) {
-            logger.error("Error:: " + e);
+            logger.error(e + "in ["+ Arrays.stream(e.getStackTrace()).filter(ste -> ste.getClassName().equals(this.getClass().getName())).collect(Collectors.toList()).get(0) +"]");
         } finally {
             try {
                 rs.close();
@@ -374,7 +365,7 @@ public class StolenRecoverBlockUnBlockImpl {
                 stmt2.close();
                 conn.commit();
             } catch (Exception e) {
-                logger.error("" + l.getClassName() + "/" + l.getMethodName() + ":" + l.getLineNumber() + e);
+                logger.error(e + "in ["+ Arrays.stream(e.getStackTrace()).filter(ste -> ste.getClassName().equals(this.getClass().getName())).collect(Collectors.toList()).get(0) +"]");
             }
         }
     }

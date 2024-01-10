@@ -1,13 +1,10 @@
 package com.glocks.util;
 
-import com.glocks.parser.CEIRFeatureFileFunctions;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.time.format.DateTimeFormatter;
-import java.util.Date;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class Util {
 

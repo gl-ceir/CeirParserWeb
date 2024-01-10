@@ -6,21 +6,18 @@
 package com.glocks.parser;
 
 import com.glocks.dao.WebActionDbDao;
-import com.glocks.util.Util;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import java.util.*;
+import java.util.stream.Collectors;
+
 import static com.glocks.parser.MainController.appdbName;
 
 
@@ -33,16 +30,13 @@ import static com.glocks.parser.MainController.appdbName;
  */
 public class FeatureForSingleStolenBlock {
 
-//    @AutoWired
-//    WebActionDbDao webActionDbDao;
     Logger logger = LogManager.getLogger(FeatureForSingleStolenBlock.class);
 
     public void readFeatureWithoutFile(Connection conn, String feature, String txn_id, String sub_feature, String mgnt_table_db, String user_type) {
         Map<String, String> map = new HashMap<String, String>();
         try {
-            logger.info("  readFeatureWithoutFile ");
+            logger.info(" FeaturWithout File for " +feature);
             new WebActionDbDao().updateFeatureFileStatus(conn, txn_id, 2, feature, sub_feature); // update web_action_db
-
             map.put("feature", feature);
             map.put("sub_feature", sub_feature);
             map.put("mgnt_table_db", mgnt_table_db);
@@ -50,15 +44,14 @@ public class FeatureForSingleStolenBlock {
             map.put("txn_id", txn_id);
             deleteFromRawTable(conn, txn_id, feature);
             map = getstolenandRecoveryDetails(conn, map);
-            logger.info("  request_type is " + map.get("request_type"));
-            logger.info("  source_type is " + map.get("source_type"));
+            logger.info(" request_type is " + map.get("request_type")  + "And  source_type is  "+ map.get("source_type"));
             if (map.get("request_type").equals("0") || map.get("request_type").equals("2")) {
                 logger.info("welcome to Stolen/Block flow");
                 if (map.get("source_type").equals("4") || map.get("source_type").equals("5")) {
-                    logger.info("welcome to Stolen/Block flow Indidual ");
+                    logger.info("welcome to Stolen/Block flow Individual ");
                     stolenFlowStartSingle(conn, map);
                 } else {
-                    logger.info("Error is only for Single  Stolen/Block,,Something went wrong ");
+                    logger.info("Error: it is only for Single  Stolen/Block,,Something went wrong ");
                 }
             }
             if (map.get("request_type").equals("1") || map.get("request_type").equals("3")) {
@@ -67,20 +60,19 @@ public class FeatureForSingleStolenBlock {
                     logger.info("welcome to Recovery/Unblock flow Single ");
                     recoverFlowStartSingle(conn, map);
                 } else {
-                    logger.info("Error is only for Single Recovery/Unblock ,,Something went wrong ");
+                    logger.info("Error: it is only for Single Recovery/Unblock ,,Something went wrong ");
                 }
             }
         } catch (Exception e) {
-            logger.info("  Error  is  + " + e);
+            logger.error(e + "in ["+ Arrays.stream(e.getStackTrace()).filter(ste -> ste.getClassName().equals(this.getClass().getName())).collect(Collectors.toList()).get(0) +"]");
             new ErrorFileGenrator().gotoErrorFile(conn, txn_id, "  Something went Wrong. Please Contact to Ceir Admin.  ");
             new CEIRFeatureFileFunctions().UpdateStatusViaApi(conn, txn_id, 1, feature);       //1 for reject
             new WebActionDbDao().updateFeatureFileStatus(conn, txn_id, 5, feature, sub_feature); // update web_action_db
         } finally {
             try {
                 conn.commit();
-
-            } catch (Exception ex) {
-                logger.info("  Error  is  + " + ex);
+            } catch (Exception e) {
+                logger.error(e + "in ["+ Arrays.stream(e.getStackTrace()).filter(ste -> ste.getClassName().equals(this.getClass().getName())).collect(Collectors.toList()).get(0) +"]");
             }
         }
     }
@@ -95,13 +87,9 @@ public class FeatureForSingleStolenBlock {
             for (int i = 1; i < 5; i++) {
                 logger.info(" going to chck exists imei  ");
                 String resllt = chckOtherExistingImei(conn, map, i);
-
                 if (resllt.equals("PRO")) {
-                    logger.info(" imei exist in sinle_stolenImei  ");
-
                     String sing_imei = "";
                     String stln_imei = "";
-
                     if (i == 1) {
                         sing_imei = "first_imei";
                         stln_imei = "imei_esn_meid1";
@@ -122,7 +110,7 @@ public class FeatureForSingleStolenBlock {
                     Statement stmt1 = conn.createStatement();
                     String qury1 = "";
                     if (map.get("request_type").equals("1")) {
-                        qury1 = " select " + stln_imei + " from "+appdbName+".stolen_individual_userdb  where stolen_id  =" + id
+                        qury1 = " select " + stln_imei + " from "+appdbName+".stolen_individual_users  where stolen_id  =" + id
                                 + " "; // , model_number, device_brand_name, contact_number
                     } else {
                         qury1 = "select " + sing_imei + "  from "+appdbName+".single_imei_details where txn_id ='" + txn_id + "' ";
@@ -168,23 +156,19 @@ public class FeatureForSingleStolenBlock {
             }
 
         } catch (Exception e) {
-            logger.error("  Error  is  + " + e);
+            logger.error(e + "in ["+ Arrays.stream(e.getStackTrace()).filter(ste -> ste.getClassName().equals(this.getClass().getName())).collect(Collectors.toList()).get(0) +"]");
         }
 
     }
 
     private String chckOtherExistingImei(Connection conn, Map<String, String> map, int i) {
         String otpt = "";
-        try {
-
-            Statement stmt = conn.createStatement();
+        try (Statement stmt = conn.createStatement();) {
             ResultSet resultmsdn = null;
             String id = map.get("id");
             String txn_id = map.get("txn_id");
-
             String sing_imei = "";
             String stln_imei = "";
-
             if (i == 1) {
                 sing_imei = "first_imei";
                 stln_imei = "imei_esn_meid1";
@@ -201,64 +185,46 @@ public class FeatureForSingleStolenBlock {
                 sing_imei = "fourth_imei";
                 stln_imei = "imei_esn_meid4";
             }
-
             String qury1 = "";
             if (map.get("request_type").equals("1")) {
-                qury1 = " select " + stln_imei + " from "+appdbName+".stolen_individual_userdb where stolen_id  =" + id + " "; // ,
-                // model_number,
-                // device_brand_name,
-                // contact_number
+                qury1 = " select " + stln_imei + " from "+appdbName+".stolen_individual_users where stolen_id  =" + id + " "; // ,
             } else {
                 qury1 = "select " + sing_imei + "  from "+appdbName+".single_imei_details where txn_id ='" + txn_id + "' ";
             }
-            logger.info(" chckOtherExistingImei quury  " + qury1);
-
+            logger.info("  Query  " + qury1);
             resultmsdn = stmt.executeQuery(qury1);
             String res = "";
-            try {
                 while (resultmsdn.next()) {
                     res = resultmsdn.getString(1);
                 }
-            } catch (Exception e) {
-                logger.info(" Resultset error " + e);
-            }
             if (res == null || res == "" || res.equals("") || res.equals("0")) {
                 otpt = "NA";
             } else {
                 otpt = "PRO";
             }
-            stmt.close();
             logger.info(" chckOtherExistingImei output  " + otpt);
         } catch (Exception e) {
-            logger.info(" chckOtherExistingImei error " + e);
+            logger.error(e + "in ["+ Arrays.stream(e.getStackTrace()).filter(ste -> ste.getClassName().equals(this.getClass().getName())).collect(Collectors.toList()).get(0) +"]");
         }
-
         return otpt;
     }
 
     public Map getstolenandRecoveryDetails(Connection conn, Map<String, String> map) {
-        Statement stmt = null;
-        try {
-            ResultSet resultmsdn = null;
-            stmt = conn.createStatement();
 
-            String qury = " select  id,  request_type,  source_type ,file_name ,quantity, user_id from "+appdbName+".stolenand_recovery_mgmt where txn_id  = '"
-                    + map.get("txn_id") + "'  ";
+            String qury = " select  id,  request_type,  source_type ,file_name ,quantity, user_id from "+appdbName+".stolen_and_recovery_txn where txn_id  = '" + map.get("txn_id") + "'  ";
             logger.info("qury: +" + qury);
-            resultmsdn = stmt.executeQuery(qury);
-            while (resultmsdn.next()) {
-                map.put("id", resultmsdn.getString("id"));
-                map.put("request_type", resultmsdn.getString("request_type"));
-                map.put("source_type", resultmsdn.getString("source_type"));
-                map.put("file_name", resultmsdn.getString("file_name"));
-                map.put("quantity", resultmsdn.getString("quantity"));
-                map.put("user_id", resultmsdn.getString("user_id"));
+           try( Statement stmt=conn.createStatement(); ResultSet result=stmt.executeQuery(qury);){
+            while (result.next()) {
+                map.put("id", result.getString("id"));
+                map.put("request_type", result.getString("request_type"));
+                map.put("source_type", result.getString("source_type"));
+                map.put("file_name", result.getString("file_name"));
+                map.put("quantity", result.getString("quantity"));
+                map.put("user_id", result.getString("user_id"));
             }
-            resultmsdn.close();
-            stmt.close();
         } catch (Exception e) {
-            logger.info("Excepton: +" + e);
-        }
+               logger.error(e + "in ["+ Arrays.stream(e.getStackTrace()).filter(ste -> ste.getClassName().equals(this.getClass().getName())).collect(Collectors.toList()).get(0) +"]");
+           }
         return map;
     }
 
@@ -298,7 +264,7 @@ public class FeatureForSingleStolenBlock {
                 }
                 if (map.get("request_type").equals("0")) {
                     qury = " select " + stln_imei
-                            + "    as imei_esn_meid , model_number, device_brand_name, contact_number from "+appdbName+".stolen_individual_userdb where stolen_id  =" + id + " ";
+                            + "    as imei_esn_meid , model_number, device_brand_name, contact_number from "+appdbName+".stolen_individual_users where stolen_id  =" + id + " ";
                     ty = "STOLEN";
                 }
                 stmt = conn.createStatement();
@@ -347,7 +313,7 @@ public class FeatureForSingleStolenBlock {
             }
 
         } catch (Exception e) {
-            logger.info("Excep: +" + e);
+            logger.error(e + "in ["+ Arrays.stream(e.getStackTrace()).filter(ste -> ste.getClassName().equals(this.getClass().getName())).collect(Collectors.toList()).get(0) +"]");
         }
 
     }
@@ -357,14 +323,13 @@ public class FeatureForSingleStolenBlock {
             for (Map.Entry<String, String> entry : map.entrySet()) {
                 String key = entry.getKey();
                 String val = entry.getValue();
-                logger.info(" KKKKEEYYYY..." + key + " --->   " + val);
+                logger.info(" Key..." + key + " --->   " + val);
             }
             if (map.get("imei_esn_meid") == null) {
-                logger.info(" Action for   IMEI Started.......");
+                logger.debug(" Action for   IMEI ");
                 String imei = getImeiWithMsisdn(conn, map);
-                logger.info("GETTED IMEI is " + imei);
+                logger.debug(" IMEI is " + imei);
                 map.put("imei_esn_meid", imei);
-                logger.info("Going to  insert into Raw  after getting imei...... ");
                 if (imei != null) {
                     insertinRawtable(conn, map);
                     map.put("failPassUpdator", "PASS");
@@ -376,11 +341,10 @@ public class FeatureForSingleStolenBlock {
 
                 for (int i = 2; i <= 4; i++) {
                     String msisdnothr = getOtherContactsImei(conn, i, map);
-
                     if (msisdnothr == null || msisdnothr.trim() == "" || msisdnothr.equals("") || msisdnothr.equals("0")) {
-                        logger.info(" new msisdnothr  id NULL...." + msisdnothr);  //optmse
+                        logger.info(" No Other msisdn Found " + msisdnothr);  //optmse
                     } else {
-                        logger.info(" new msisdnothr ...." + msisdnothr);
+                        logger.info(" new msisdn _ " + msisdnothr);
                         map.put("contact_number", msisdnothr);
                         imei = getImeiWithMsisdn(conn, map);
                         map.put("imei_esn_meid", imei);
@@ -398,12 +362,9 @@ public class FeatureForSingleStolenBlock {
                 map.put("failPassUpdator", "PASS");
 //                f ailPasstatusUpdator(conn, map, 0);
             }
-
         } catch (Exception e) {
-            logger.info("Excep  at  stolenFlowStartSingleExtended: +" + e);
-
+            logger.error(e + "in ["+ Arrays.stream(e.getStackTrace()).filter(ste -> ste.getClassName().equals(this.getClass().getName())).collect(Collectors.toList()).get(0) +"]");
         }
-
     }
 
     private String getImeiWithMsisdn(Connection conn, Map<String, String> map) throws ClassNotFoundException, SQLException {
@@ -411,7 +372,7 @@ public class FeatureForSingleStolenBlock {
         String imei = null;
         String txn_id = map.get("txn_id");
         String lawful_stolen_usage_db_num_days_qury = " select value from  "+appdbName+".sys_param  where tag  = 'lawful_stolen_usage_db_num_days'";
-        logger.info(" getImeiMsisdn ,,,lawful_stolen_usage_db_num_days_qury,,, " + lawful_stolen_usage_db_num_days_qury);
+        logger.info(" Query for  stolen usage db num days :" + lawful_stolen_usage_db_num_days_qury);
         Statement stmt8 = conn.createStatement();
         ResultSet resultDay = stmt8.executeQuery(lawful_stolen_usage_db_num_days_qury);
         int days = 0;
@@ -422,7 +383,6 @@ public class FeatureForSingleStolenBlock {
         } catch (Exception e) {
             logger.info("Error..lawful_stolen_usage_db_num_days_qury.." + e);
         }
-
         stmt8.close();
         DateFormat dateFormat1 = new SimpleDateFormat("dd-MMM-yy"); //
         Calendar cal = Calendar.getInstance();
@@ -434,9 +394,8 @@ public class FeatureForSingleStolenBlock {
         List lstGsma = new ArrayList();
         String msisdn = map.get("contact_number");
         String strTacs = "Result......";
-        String device_usage_db_qury = " select imei from  "+appdbName+".device_usage_db  where msisdn = '" + msisdn
-                + "'  and modified_on > '" + date + "' ";
-        logger.info(" ImeiWithMsisdn ,,,device_usage_db,,, " + device_usage_db_qury);
+        String device_usage_db_qury = " select imei from  "+appdbName+".active_unique_imei  where msisdn = '" + msisdn + "'  and modified_on > '" + date + "' ";
+        logger.info(" ImeiWithMsisdn ,,, for active " + device_usage_db_qury);
         Statement stmt = conn.createStatement();
         ResultSet resultmsdn = stmt.executeQuery(device_usage_db_qury);
         try {
@@ -444,11 +403,10 @@ public class FeatureForSingleStolenBlock {
                 lst.add(resultmsdn.getString(1));
             }
         } catch (Exception e) {
-            logger.info("Error..getErrorMsisdn.." + e);
+            logger.error("Error..getErrorMsisdn.." + e);
         }
         logger.info("List size ..." + lst.size());
-        String device_duplicate_db_qury = " select imei from  "+appdbName+".device_duplicate_db  where msisdn = '" + msisdn
-                + "'  and modified_on > '" + date + "' ";
+        String device_duplicate_db_qury = " select imei from  "+appdbName+".active_imei_with_different_msisdn  where msisdn = '" + msisdn + "'  and modified_on > '" + date + "' ";
         logger.info(" getImeiSMsisdn ,,,device_duplicate_db,,, " + device_duplicate_db_qury);
         ResultSet result2 = stmt.executeQuery(device_duplicate_db_qury);
         try {
@@ -456,21 +414,19 @@ public class FeatureForSingleStolenBlock {
                 lst.add(result2.getString(1));
             }
         } catch (Exception e) {
-            logger.info("Error..getImeithMsisdn   ,,,,  device_duplicate_db.." + e);
+            logger.error("Error while obtaining data " + e);
         }
-        logger.info("list SIZE" + lst.size());
+        logger.info("Total list size" + lst.size());
         if (lst.isEmpty()) {
-            logger.info("Empty List");
+            logger.info("List is Empty");
 //            String fileString = "No device Found in device_duplicate_db and device_usage_db  with  msisdn = '" + msisdn
 //                    + "' and  Use date after " + date + "";
-
             String fileString = "Error Code :    , Error Description :  No Device Found associated with  msisdn " + msisdn;
-
             errFile.gotoErrorFile(conn, txn_id, fileString);
             map.put("failPassUpdator", "FAIL");
 //            f ailPasstatusUpdator(conn, map, 1);
         } else {
-            logger.info("NOT Empty List");
+            logger.debug("Data Found");
             if (lst.size() == 1) {
                 imei = (String) lst.get(0);
             } else {
@@ -482,19 +438,17 @@ public class FeatureForSingleStolenBlock {
                 int coustion = 0;
                 int resultsiz = 0;
                 for (int ind = 0; ind < lst.size(); ind++) {
-                    String gsma_tac_qury = " select    band_name , model_name  from  "+appdbName+".gsma_tac_db  where device_id = "
-                            + lst.get(ind).toString().substring(0, 8) + "  ";
+                    String gsma_tac_qury = " select brand_name , model_name  from  "+appdbName+".mobile_device_repository  where device_id = " + lst.get(ind).toString().substring(0, 8) + "  ";
                     logger.info(" Query ,,,,,, " + gsma_tac_qury);
                     ResultSet result3 = stmt.executeQuery(gsma_tac_qury);
                     try {
                         while (result3.next()) {
                             resultsiz++;
-                            logger.info("Result Startes");
                             {
-                                strTacs += column + "> Brand Name :" + result3.getString("band_name") + ",Model Name : "
+                                strTacs += column + "> Brand Name :" + result3.getString("brand_name") + ",Model Name : "
                                         + result3.getString("model_name") + ",";
                                 if (model_number.equalsIgnoreCase(result3.getString("model_name"))
-                                        && device_brand_name.equalsIgnoreCase(result3.getString("band_name"))) {
+                                        && device_brand_name.equalsIgnoreCase(result3.getString("brand_name"))) {
                                     lstGsma.add(lst.get(ind).toString());
                                     coustion++;
                                 }
@@ -506,16 +460,15 @@ public class FeatureForSingleStolenBlock {
                     }
                 }
                 stmt.close();
-                logger.info(" resultsiz listZise" + resultsiz);
-                logger.info(" column of  listZise" + column);
-
+                logger.info(" resultsize ::" + resultsiz);
+                logger.info(" column details:" + column);
                 if (coustion > 1) {
-                    logger.info("  in gsma_tac_db ,,  2 or more values  exists  ");
+                    logger.info("  in MobileDeViceRepo  2 or more values exists  ");
                 }
                 if (lstGsma.size() == 1) {
                     imei = (String) lstGsma.get(0);
                 } else {
-                    logger.info(" List Size  in Gsma_tac_db is not valid");
+                    logger.info("Here NO Similar Model And Brand Name FOUND in MDR");
 //                         String fileString = strTacs + "...... NO SIMILAR  Model And Brand Name  FOUND IN Gsma_tac_Db SCHEMA ";
                     String fileString = " No Model / Brand Name Match with the Imei associated with Msisdn ";
                     errFile.gotoErrorFile(conn, txn_id, fileString);
@@ -546,28 +499,31 @@ public class FeatureForSingleStolenBlock {
         } else {
             dateNow = new SimpleDateFormat("YYYY-MM-dd").format(new Date());
         }
-
-        String dateFunction = Util.defaultNowDate();
+        String dateFunction = "CURRENT_TIMESTAMP";
         if (feature.equalsIgnoreCase("Stolen") || feature.equalsIgnoreCase("Recovery")) {
-            DeviceType = "( select interp from "+appdbName+".system_config_list_db where tag = 'DEVICE_TYPE' and value  =(select device_type from "+appdbName+".stolen_individual_userdb where stolen_id  =" + id + " ) )";
-            DeviceIdType = "( select interp from "+appdbName+".system_config_list_db where tag = 'DEVICE_ID_TYPE' and value  =( select device_id_type from "+appdbName+".stolen_individual_userdb where stolen_id  =" + id + " ))";
-            MultipleSIMStatus = " (select interp from "+appdbName+".system_config_list_db where tag = 'MULTI_SIM_STATUS' and value  = (select multi_sim_status  from "+appdbName+".stolen_individual_userdb where stolen_id  =" + id + " ) )";
-            DeviceSerial = " ( Select  device_serial_number from "+appdbName+".stolen_individual_userdb where stolen_id  =" + id + " ) ";
+            DeviceType = "( select interpretation from "+appdbName+".sys_param_list_value where tag = 'DEVICE_TYPE' and value  =(select device_type from "+appdbName+".stolen_individual_users where stolen_id  =" + id + " ) )";
+            DeviceIdType = "( select interpretation from "+appdbName+".sys_param_list_value where tag = 'DEVICE_ID_TYPE' and value  =( select device_id_type from "+appdbName+".stolen_individual_users where stolen_id  =" + id + " ))";
+            MultipleSIMStatus = " (select interpretation from "+appdbName+".sys_param_list_value where tag = 'MULTI_SIM_STATUS' and value  = (select mul_sim_status  from "+appdbName+".stolen_individual_users where stolen_id  =" + id + " ) )";
+            DeviceSerial = " ( Select  device_serial_number from "+appdbName+".stolen_individual_users where stolen_id  =" + id + " ) ";
         } else {
-            DeviceType = "( select interp from "+appdbName+".system_config_list_db where tag = 'DEVICE_TYPE'  and value  =(select device_type  from "+appdbName+".single_imei_details where txn_id ='" + txn_id + "' )) ";
-            DeviceIdType = "( select interp from "+appdbName+".system_config_list_db where tag = 'DEVICE_ID_TYPE' and value  =(select device_id_type   from "+appdbName+".single_imei_details where txn_id ='" + txn_id + "') )";
-            MultipleSIMStatus = "  (select interp from "+appdbName+".system_config_list_db where tag = 'MULTI_SIM_STATUS' and value  =(select multiple_sim_status   from "+appdbName+".single_imei_details where txn_id ='" + txn_id + "') )";
+            DeviceType = "( select interpretation from "+appdbName+".sys_param_list_value where tag = 'DEVICE_TYPE'  and value  =(select device_type  from "+appdbName+".single_imei_details where txn_id ='" + txn_id + "' )) ";
+            DeviceIdType = "( select interpretation from "+appdbName+".sys_param_list_value where tag = 'DEVICE_ID_TYPE' and value  =(select device_id_type   from "+appdbName+".single_imei_details where txn_id ='" + txn_id + "') )";
+            MultipleSIMStatus = "  (select interpretation from "+appdbName+".sys_param_list_value where tag = 'MULTI_SIM_STATUS' and value  =(select mul_sim_status   from "+appdbName+".single_imei_details where txn_id ='" + txn_id + "') )";
             DeviceSerial = " ( select  device_serial_number  from "+appdbName+".single_imei_details where txn_id ='" + txn_id + "' )";
         }
 
-        String query = "insert into  "+appdbName+"." + feature + "_raw"
-                + "   (   DeviceType,DeviceIdType ,MultipleSIMStatus,SNofDevice,IMEIESNMEID,Devicelaunchdate,DeviceStatus,status,file_name , txn_id , time ,feature_type ,CREATED_ON , modified_on    )   values  "
+//        String query = "insert into  "+appdbName+"." + feature + "_raw"
+//                + "   (   DeviceType,DeviceIdType ,MultipleSIMStatus,SNofDevice,IMEIESNMEID,Devicelaunchdate,DeviceStatus,status,file_name , txn_id , time ,feature_type ,CREATED_ON , modified_on    )   values  "
+//                + " (  " + DeviceType + "  , " + DeviceIdType + " ,  " + MultipleSIMStatus + " ,  " + DeviceSerial
+//                + " ,  '" + imei_esn_meid + "' , '', '' , 'Init' ,  'NA' , '" + txn_id + "' ,  '" + dateNow + "'  , '"
+//                + feature + "'  ,  " + dateFunction + ", " + dateFunction + "      )   ";
+
+        String query = "insert into  "+appdbName+"." + feature + "_temp_data"
+                + "   (   device_type,device_id_type ,mul_sim_status,sno_of_device,imei_esn_meid,device_launch_date,device_status,status,file_name , txn_id , time ,feature_type ,created_on , modified_on    )   values  "
                 + " (  " + DeviceType + "  , " + DeviceIdType + " ,  " + MultipleSIMStatus + " ,  " + DeviceSerial
                 + " ,  '" + imei_esn_meid + "' , '', '' , 'Init' ,  'NA' , '" + txn_id + "' ,  '" + dateNow + "'  , '"
                 + feature + "'  ,  " + dateFunction + ", " + dateFunction + "      )   ";
-
         logger.info(" Query  for insertion... " + query);
-
         try {
             stmt = conn.createStatement();
             stmt.executeUpdate(query);
@@ -575,7 +531,7 @@ public class FeatureForSingleStolenBlock {
 //            conn.commit();
 
         } catch (Exception e) {
-            logger.info(" Error  " + e);
+            logger.error(e + "in ["+ Arrays.stream(e.getStackTrace()).filter(ste -> ste.getClassName().equals(this.getClass().getName())).collect(Collectors.toList()).get(0) +"]");
         }
     }
 
@@ -587,7 +543,6 @@ public class FeatureForSingleStolenBlock {
         String management_table = map.get("mgnt_table_db");
         CEIRFeatureFileFunctions ceirfunction = new CEIRFeatureFileFunctions();
         logger.info("main_type Is:" + feature + ",  management_table:" + management_table);
-
         new WebActionDbDao().updateFeatureFileStatus(conn, txn_id, (stats == 1 ? 4 : 2), feature, subfeature); // update web_action_db
         if (stats == 1) {
             ceirfunction.UpdateStatusViaApi(conn, txn_id, stats, feature);
@@ -600,37 +555,34 @@ public class FeatureForSingleStolenBlock {
         String cntctNo = null;
 
         ResultSet resultmsdn = null;
-        String qury = " select contact_number" + i + "  as  cantctNo from "+appdbName+".stolen_individual_userdb where stolen_id  = '" + map.get("id") + "'    ";
-        logger.info("getOtherContactsImei qury :" + qury);
+        String qury = " select contact_number" + i + "  as  contactNo from "+appdbName+".stolen_individual_users where stolen_id  = '" + map.get("id") + "'    ";
+        logger.info(" OtherContactsImei qury :" + qury);
         try {
             Statement stmt = conn.createStatement();
             resultmsdn = stmt.executeQuery(qury);
             try {
                 while (resultmsdn.next()) {
-                    cntctNo = resultmsdn.getString("cantctNo");
+                    cntctNo = resultmsdn.getString("contactNo");
                 }
                 logger.info("Result at getOtherContactsImei  " + cntctNo);
             } catch (Exception e) {
-                logger.info("Error..getOtherContactsImei.." + e);
+                logger.error(e + "in ["+ Arrays.stream(e.getStackTrace()).filter(ste -> ste.getClassName().equals(this.getClass().getName())).collect(Collectors.toList()).get(0) +"]");
             }
             stmt.close();
-
         } catch (Exception e) {
-            logger.info("Error..getOtherContactsImei ..2.." + e);
+            logger.error(e + "in ["+ Arrays.stream(e.getStackTrace()).filter(ste -> ste.getClassName().equals(this.getClass().getName())).collect(Collectors.toList()).get(0) +"]");
         }
         return cntctNo;
     }
 
     public void deleteFromRawTable(Connection conn, String txn_id, String feature) {
-        String query = "delete from "+appdbName+"." + feature + "_raw where txn_id ='" + txn_id + "'";
+        String query = "delete from "+appdbName+"." + feature + "_temp_data where txn_id ='" + txn_id + "'";
         logger.info(query);
-        Statement st5 = null;
-        try {
-            st5 = conn.createStatement();
-            st5.executeUpdate(query);
+        try ( Statement st=conn.createStatement();){
+            st.executeUpdate(query);
             logger.info("delete from Raw table");
         } catch (Exception e) {
-            logger.error("Error at  " + e);
+            logger.error(e + "in ["+ Arrays.stream(e.getStackTrace()).filter(ste -> ste.getClassName().equals(this.getClass().getName())).collect(Collectors.toList()).get(0) +"]");
         }
     }
 
