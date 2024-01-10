@@ -60,7 +60,7 @@
             <artifactId>httpclient</artifactId>
         </dependency>
 
-          <dependency>
+         <dependency>
                   <groupId>com.github.ulisesbocchio</groupId>
             <artifactId>jasypt-spring-boot</artifactId>    <!--  IF NOT WORKING MIGHT BE   -spring-boot-starter?-->
             <version>1.18</version>
