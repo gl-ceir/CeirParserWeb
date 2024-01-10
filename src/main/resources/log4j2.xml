@@ -1,12 +1,12 @@
-<!--<?xml version="1.0" encoding="UTF-8"?>
-<Configuration status="INFO">
+<Configuration status="INFO" shutdownHook="disable">
     <Appenders>
         <Console name="ConsoleAppender" target="SYSTEM_OUT">
-            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n" />
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} %-5level [%C{1}][%F][%M()] :%L - %msg%n" />
         </Console>
-        <File name="FileAppender" fileName="${env:DATA_HOME}/cdrpreprocessor/seatel/st_p_gw/logs/log${date:yyyyMMdd}.log" immediateFlush="false" append="true">
-            <PatternLayout pattern="%d{yyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+        <File name="FileAppender" fileName="/home/sachin/Glocks/extras/logs/WebParserlog${date:yyyyMMdd}.log" immediateFlush="false" append="true">
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} %-5level [%C{1}][%F][%M()] :%L - %msg%n"/>
         </File>
+
     </Appenders>
     <Loggers>
         <Root level="info">
@@ -14,4 +14,4 @@
             <AppenderRef ref="FileAppender"/>
         </Root>
     </Loggers>
-</Configuration>-->
+</Configuration>

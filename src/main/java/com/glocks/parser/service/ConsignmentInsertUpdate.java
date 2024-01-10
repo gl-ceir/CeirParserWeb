@@ -1,36 +1,27 @@
 package com.glocks.parser.service;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.Statement;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.HashMap;
-import com.glocks.parser.ErrorFileGenrator;
-
+import com.glocks.dao.SourceTacInactiveInfoDao;
+import com.glocks.dao.SysConfigurationDao;
+import com.glocks.dao.WebActionDbDao;
+import com.glocks.http.HttpURLConnectionExample;
+import com.glocks.parser.*;
+import com.glocks.util.Util;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import com.glocks.log.LogWriter;
-import com.glocks.parser.CEIRFeatureFileFunctions;
-import com.glocks.parser.CEIRFeatureFileParser;
-import com.glocks.parser.HexFileReader;
-import com.glocks.parser.Rule;
-import com.glocks.parser.RuleFilter;
-import com.glocks.util.Util;
-import java.io.BufferedWriter;
-import java.io.FileOutputStream;
-import java.io.OutputStreamWriter;
+
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.List;
-import java.util.Map;
+import java.sql.Statement;
+import java.text.SimpleDateFormat;
+import java.util.*;
 import java.util.stream.Collectors;
+
+import static com.glocks.parser.MainController.appdbName;
 
 public class ConsignmentInsertUpdate {
 
@@ -59,7 +50,8 @@ public class ConsignmentInsertUpdate {
         String device_greylist_db_qry = null;
         String device_greylist_History_db_qry = null;
 
-        HashMap<String, String> my_rule_detail = new HashMap<String, String>();;
+        HashMap<String, String> my_rule_detail = new HashMap<String, String>();
+        ;
         HashMap<String, String> stolnRcvryDetails = new HashMap<String, String>();
         HashMap<String, String> feature_file_mapping = new HashMap<String, String>();
         HashMap<String, String> feature_file_management = new HashMap<String, String>();
@@ -70,34 +62,35 @@ public class ConsignmentInsertUpdate {
         String period = "";
 //          int parser_base_limit = 0;
         int update_sno = 0;
-        LogWriter logWriter = new LogWriter();
-        String logPath = logWriter.getLogPath();
+
+        String logPath = new SysConfigurationDao().getTagValue(conn, "WebParserLogPath"); //"/u02/eirsdata/BackendProcess/CeirParser";
         String fileName = null;
         File file = null;
         int dvcDbCounter = 0;
 //        String log = null;
         int split_upload_batch_no = 1; // it should be dymnamic
         int split_upload_batch_count = 0;
-        int rrslt = 0;
+        int customUserForStock = 0;
         int countError = 0;
         int stolenRecvryBlock = 0;
         int totalCount = 0;
         CEIRFeatureFileParser cEIRFeatureFileParser = new CEIRFeatureFileParser();
-        String errorFilePath = cEIRFeatureFileParser.getErrorFilePath(conn);
+        WebActionDbDao webActionDbDao = new WebActionDbDao();
+        String errorFilePath = new SysConfigurationDao().getTagValue(conn, "system_error_filepath");
         BufferedWriter bw = null;
         try {
             File fileEr = new File(errorFilePath + txn_id);       //   errFile.gotoErrorFilewithList(errorFilePath, txn_id, fileErrorLines);
             fileEr.mkdir();
             String fileNameInput = errorFilePath + txn_id + "/" + txn_id + "_error.csv";
-            new ErrorFileGenrator().redudencyApiConnect(txn_id + "_error.csv", txn_id, errorFilePath + txn_id + "/");
+            new HttpURLConnectionExample().redudencyApiConnect(txn_id + "_error.csv", txn_id, errorFilePath + txn_id + "/");
             File fout = new File(fileNameInput);
             FileOutputStream fos = new FileOutputStream(fout, true);
             bw = new BufferedWriter(new OutputStreamWriter(fos));
-            feature_file_mapping = ceirfunction.getFeatureMapping(conn, operator, usertype_name); // select * from // feature_mapping_db
+            feature_file_mapping = ceirfunction.getFeatureMapping(conn, operator, usertype_name); // select * from // feature_table_mapping
             logger.info("ErrorFile Name " + fileNameInput);
             if (webActState == 3) {
-                query = "select count(*) as counnt from " + operator + "_raw where  txn_id='" + txn_id + "'  ";
-                logger.info("Query(STATE 3 ) " + query);
+                query = "select count(*) as counnt from " + appdbName + "." + operator + "_temp_data where  txn_id='" + txn_id + "'  ";
+                logger.info("Query when webAction statte = 3 :  " + query);
                 stmt = conn.createStatement();
                 rs = stmt.executeQuery(query);
                 int rawCount = 0;
@@ -105,24 +98,24 @@ public class ConsignmentInsertUpdate {
                 while (rs.next()) {
                     rawCount = rs.getInt(1);
                 }
-                query = " select count(*) as counnt  from  " + feature_file_mapping.get("output_device_db") + " where   txn_id='" + txn_id + "'   ";
+                query = " select count(*) as counnt  from  " + appdbName + "." + feature_file_mapping.get("output_device_db") + " where   txn_id='" + txn_id + "'   ";
                 rs = stmt.executeQuery(query);
                 while (rs.next()) {
                     finalCount = rs.getInt(1);
                 }
-                logger.info("Query(STATE 3 ). " + query); // 
+                logger.info(". " + query); //
                 logger.info("State Result ..rawCount  " + rawCount + "  finalCount" + finalCount);
                 if (rawCount == finalCount) {
                     ceirfunction.UpdateStatusViaApi(conn, txn_id, 1, operator);
-                    ceirfunction.updateFeatureFileStatus(conn, txn_id, 4, operator, sub_feature);
+                    webActionDbDao.updateFeatureFileStatus(conn, txn_id, 4, operator, sub_feature);
                 } else {
-                    query = " delete from   " + feature_file_mapping.get("output_device_db") + " where   txn_id='" + txn_id + "'   ";
+                    query = " delete from   " + appdbName + "." + feature_file_mapping.get("output_device_db") + " where   txn_id='" + txn_id + "'   ";
                     rs = stmt.executeQuery(query);
-                    logger.info("Query(STATE 3 ).. " + query);
-                    query = "update  " + operator + "_raw  set status = 'Init' where  txn_id='" + txn_id + "'  ";
+                    logger.info("Query.. " + query);
+                    query = "update  " + appdbName + "." + operator + "_temp_data  set status = 'Init' where  txn_id='" + txn_id + "'  ";
                     rs = stmt.executeQuery(query);
                     logger.info("Query(STATE 3 ). " + query);
-                    ceirfunction.updateFeatureFileStatus(conn, txn_id, 2, operator, sub_feature);
+                    webActionDbDao.updateFeatureFileStatus(conn, txn_id, 2, operator, sub_feature);
                     conn.commit();
                 }
                 return;
@@ -132,10 +125,7 @@ public class ConsignmentInsertUpdate {
 //               if (my_result_set.next()) {
 //                    parser_base_limit = my_result_set.getInt("split_upload_set_no");
 //               }
-            query = "select * from " + operator + "_raw where   txn_id='" + txn_id + "' and status='Init' order by sno asc ";
-            stmt = conn.createStatement();
-            logger.info("Query.. " + query);
-            rs = stmt.executeQuery(query);
+            logger.info(" Web Action   state :  " + webActState + ", With operator: " + operator);
             HashMap<String, String> device_info = new HashMap<String, String>();
             RuleFilter rule_filter = new RuleFilter();
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
@@ -153,32 +143,36 @@ public class ConsignmentInsertUpdate {
                 myWriter = new FileWriter(file);
             }
 
-            period = cEIRFeatureFileParser.checkGraceStatus(conn);  // grace / postgrace
-            
+            period = new SysConfigurationDao().getTagValue(conn, "GRACE_PERIOD_END_DATE");
+            ;  // grace / postgrace
+
             feature_file_management = ceirfunction.getFeatureFileManagement(conn, feature_file_mapping.get("mgnt_table_db"), txn_id); // select * from " + management_db + " where
             if (operator.equalsIgnoreCase("Stolen") || operator.equalsIgnoreCase("Recovery") || operator.equalsIgnoreCase("Block") || operator.equalsIgnoreCase("Unblock")) {
-                stolnRcvryDetails = cEIRFeatureFileParser.getStolenRecvryDetails(conn, txn_id);
+                stolnRcvryDetails = new StolenRecoverBlockUnBlockImpl().getStolenRecvryDetails(conn, txn_id);
                 stolenRecvryBlock = 1;
             }
-            logger.info("OPERATOR/FEATURE--" + operator + "--SUBFEATURE--" + sub_feature + "");
+            logger.info("OPERATOR/FEATURE--" + operator + "--SUBFEATURE--" + sub_feature);
             bw.write("DEVICETYPE,DeviceIdType,MultipleSIMStatus,S/NofDevice,IMEI,Devicelaunchdate,DeviceStatus, Error Code ,Error Message ");
             bw.newLine();
-            while (rs.next()) {   // raw db records 
-                logger.info("Served IMEI  =" + rs.getString("IMEIESNMEID"));
-                device_info.put("DeviceIdType", rs.getString("DeviceIdType"));
-                device_info.put("IMEIESNMEID", rs.getString("IMEIESNMEID"));
-                device_info.put("DeviceType", rs.getString("DeviceType"));
-                device_info.put("MultipleSIMStatus", rs.getString("MultipleSIMStatus"));
-                device_info.put("SNofDevice", rs.getString("SNofDevice"));
-                device_info.put("Devicelaunchdate", rs.getString("Devicelaunchdate"));
-                device_info.put("DeviceStatus", rs.getString("DeviceStatus"));
+            query = "select * from " + appdbName + "." + operator + "_temp_data where   txn_id='" + txn_id + "' and status='Init' order by sno asc ";
+            stmt = conn.createStatement();
+            logger.info("Query.. " + query);
+            rs = stmt.executeQuery(query);
+            while (rs.next()) {   // raw db records
+                logger.info("Served IMEI  =" + rs.getString("imei_esn_meid"));
+                device_info.put("DeviceIdType", rs.getString("Device_id_type"));
+                device_info.put("IMEIESNMEID", rs.getString("imei_esn_meid"));
+                device_info.put("DeviceType", rs.getString("Device_type"));
+                device_info.put("MultipleSIMStatus", rs.getString("Mul_sim_status"));
+                device_info.put("SNofDevice", rs.getString("sno_of_device"));
+                device_info.put("Devicelaunchdate", rs.getString("device_launch_date"));
+                device_info.put("DeviceStatus", rs.getString("Device_status"));
                 device_info.put("operator", operator);
                 device_info.put("feature", operator);
                 device_info.put("file_name", rs.getString("file_name"));
                 device_info.put("operator_tag", operator_tag);
                 device_info.put("txn_id", txn_id);
-
-                logger.info("GetMyFeatureRule start   ");
+                logger.info(" FeatureRule start   ");
                 my_rule_detail = rule_filter.getMyFeatureRule(conn, device_info, rulelist, myWriter, bw);
                 logger.info("GetMyFeatureRule Error Flag  --    " + my_rule_detail.get("errorFlag"));
                 String fileArray = device_info.get("DeviceType") + "," + device_info.get("DeviceIdType") + "," + device_info.get("MultipleSIMStatus") + "," + device_info.get("SNofDevice") + "," + device_info.get("IMEIESNMEID") + "," + device_info.get("Devicelaunchdate") + "," + device_info.get("DeviceStatus") + "";
@@ -188,23 +182,24 @@ public class ConsignmentInsertUpdate {
                     bw.newLine();
                 } else {   // execute Action False
                     logger.info("Action_output." + my_rule_detail.get("action_output"));
-                    if (my_rule_detail.get("action_output").equalsIgnoreCase("Failure")) {//action is failed +  on which rule it is failed 
+                    if (my_rule_detail.get("action_output").equalsIgnoreCase("Failure")) {//action is failed +  on which rule it is failed
                         bw.write(fileArray + ", Action is not Completed for  " + my_rule_detail.get("rule_name"));
                         bw.newLine();
                     }
                     countError++;
                 }
                 update_sno = Integer.parseInt(rs.getString("sno"));
-            }                 // END While 
+            }                 // END While
 //               if (update_sno != 0) {
 //                    cEIRFeatureFileParser.updateRawLastSno(conn, operator, update_sno);
 //               }
             logger.info("Count error.. " + countError + " , Total imei in mgmt db .. ");
             String error_file_path = errorFilePath + txn_id + "/" + txn_id + "_error.csv";
             logger.info("CountError(if 0: Process Pass  )  -- " + countError);
+            countError = 0;
             if (countError != 0) {
-                ceirfunction.UpdateStatusViaApi(conn, txn_id, 1, operator);    
-                ceirfunction.updateFeatureFileStatus(conn, txn_id, 4, operator, sub_feature); // update web_action_db
+                ceirfunction.UpdateStatusViaApi(conn, txn_id, 1, operator);
+                webActionDbDao.updateFeatureFileStatus(conn, txn_id, 4, operator, sub_feature); // update web_action_db
             } else {
                 logger.info("File  moving to old Folder ");
                 file = new File(errorFilePath + txn_id + "/old/");
@@ -219,8 +214,6 @@ public class ConsignmentInsertUpdate {
                     logger.info("Failed to move the file");
                 }
 
-                rrslt = cEIRFeatureFileParser.getCustomData(conn, txn_id); //  1  for custom select user_type from stock_mgmt where txn_id
-                logger.info(".getCustomData rslt ." + rrslt);
                 stmt0 = conn.createStatement();
                 stmt1 = conn.createStatement();
                 stmt2 = conn.createStatement();
@@ -228,8 +221,6 @@ public class ConsignmentInsertUpdate {
                 stmt4 = conn.createStatement();
                 stmt5 = conn.createStatement();
                 split_upload_batch_count = 0;
-                logger.info("  inserting....");
-                rs1 = stmt0.executeQuery(query);
                 String dateNow1 = "";
                 if (conn.toString().contains("oracle")) {
                     dateNow1 = new SimpleDateFormat("dd-MMM-YY").format(new Date());
@@ -241,98 +232,107 @@ public class ConsignmentInsertUpdate {
                 String dateFunction = Util.defaultDate(isOracle);
 
                 logger.info(".output_device_db  ." + feature_file_mapping.get("output_device_db"));
+                logger.info("To get Details from Db:" + query);
+
+                rs1 = stmt0.executeQuery(query);
                 while (rs1.next()) {      //can b rs (we can run again)
                     split_upload_batch_count++;
-                    String dvsStatus = rs1.getString("DeviceStatus");
+                    String dvsStatus = rs1.getString("Device_Status");
                     if (stolenRecvryBlock == 1) {
                         dvsStatus = stolnRcvryDetails.get("divceStatus");
                     }
-                    dvcDbCounter = getCounterFromDeviceDb(conn, rs1.getString("IMEIESNMEID").substring(0, 14));
-                    sourceTacList.add(rs1.getString("IMEIESNMEID").substring(0, 8));
-                    my_query = "insert into " + feature_file_mapping.get("output_device_db")
-                            + " (device_id_type,created_on,device_launch_date,device_status,"
-                            + "device_type,imei_esn_meid,modified_on,multiple_sim_status,period,sn_of_device,txn_id,user_id ,feature_name ,actual_imei ,tac  ) " //,feature_name
-                            + "values(" + "'" + rs1.getString("DeviceIdType") + "'," + "" + dateFunction + "," /// "dd-MMM-YY"                              
-                            + "'" + rs1.getString("Devicelaunchdate") + "', '" + dvsStatus + "'  ,'" + rs1.getString("DeviceType") + "'," + "'" + rs1.getString("IMEIESNMEID").substring(0, 14)
-                            + "'," + "" + dateFunction + "," + "'" + rs1.getString("MultipleSIMStatus") + "'," + "'"
-                            + period + "'," + "'" + rs1.getString("SNofDevice") + "'," + "'" + txn_id + "'," + ""
-                            + feature_file_management.get("user_id") + ", '" + operator + "' , '" + rs1.getString("IMEIESNMEID") + "'  , '" + rs1.getString("IMEIESNMEID").substring(0, 8) + "'    )";    // "," + operator +  
+                    //    to_date('"+rs1.getString("Device_launch_date")+"','yyyy-mm-dd')
+                    dvcDbCounter = getCounterFromDeviceDb(conn, rs1.getString("imei_esn_meid").substring(0, 14));
+                    sourceTacList.add(rs1.getString("imei_esn_meid").substring(0, 8));
+                    logger.info("device Launch date:::"+rs1.getDate("Device_launch_date") + "New date" +rs1.getString("Device_launch_date") );
+                    String deviceLaunchDate = rs1.getDate("Device_launch_date") == null ? " '' " :
+                            isOracle ?   " to_date('"+rs1.getDate("Device_launch_date")+"','yyyy-mm-dd') "  :   rs1.getString("Device_launch_date");
 
-                    logger.info("Counnter si " + dvcDbCounter);
+                    my_query = "insert into " + appdbName + "." + feature_file_mapping.get("output_device_db")
+                            + " (device_id_type,device_launch_date,device_status,"
+                            + "device_type,imei_esn_meid,mul_sim_status,period,sno_of_device,txn_id,user_id ,feature_name ,actual_imei ,tac  ) " //,feature_name
+                            + "values(" + "'" + rs1.getString("Device_id_type") + "'," /// "dd-MMM-YY"
+                            + "   " + deviceLaunchDate + "   , "  +
+                            "'" + dvsStatus + "'  ,'" + rs1.getString("Device_Type") + "'," + "'" + rs1.getString("imei_esn_meid").substring(0, 14)
+                            + "'," + "'" + rs1.getString("Mul_SIM_Status") + "'," + "'"
+                            + period + "'," + "'" + rs1.getString("SNo_of_Device") + "'," + "'" + txn_id + "'," + ""
+                            + feature_file_management.get("user_id") + ", '" + operator + "' , '" + rs1.getString("imei_esn_meid") + "'  , '" + rs1.getString("imei_esn_meid").substring(0, 8) + "'    )";    // "," + operator +
+
+                    logger.info("Counter Value: " + dvcDbCounter);
                     if (dvcDbCounter == 0) {
-                        device_db_query = "insert into device_db (counter ,device_id_type,created_on,device_launch_date,device_status,"
-                                + "device_type,imei_esn_meid,modified_on,multiple_sim_status,period,sn_of_device, tac  ,txn_id , actual_imei ,   feature_name   ) " // feature_name
-                                + "values(1 ,'" + rs1.getString("DeviceIdType") + "'," + "" + dateFunction + "," + "'"
-                                + rs1.getString("Devicelaunchdate") + "'," + "'" + rs1.getString("DeviceStatus") + "',"
-                                + "'" + rs1.getString("DeviceType") + "'," + "'" + rs1.getString("IMEIESNMEID").substring(0, 14) + "',"
-                                + "" + dateFunction + "," + "'" + rs1.getString("MultipleSIMStatus") + "',"
-                                + "'" + period + "'," + "'" + rs1.getString("SNofDevice") + "',"
-                                + "'" + rs1.getString("IMEIESNMEID").substring(0, 8) + "'  "
+                        device_db_query = "insert into " + appdbName + ".device_db (counter ,device_id_type,device_launch_date,device_status,"
+                                + "device_type,imei_esn_meid,mul_sim_status,period,sno_of_device, tac  ,txn_id , actual_imei ,   feature_name   ) " // feature_name
+                                + "values(1 ,'" + rs1.getString("Device_Id_Type") + "', "
+                                + deviceLaunchDate + "," + "'" + rs1.getString("Device_Status") + "',"
+                                + "'" + rs1.getString("Device_Type") + "'," + "'" + rs1.getString("IMEI_ESN_MEID").substring(0, 14) + "',"
+                                 + "'" + rs1.getString("Mul_SIM_Status") + "',"
+                                + "'" + period + "'," + "'" + rs1.getString("SNo_of_Device") + "',"
+                                + "'" + rs1.getString("IMEI_ESN_MEID").substring(0, 8) + "'  "
                                 + ",'" + txn_id + "'  "
-                                + ",'" + rs1.getString("IMEIESNMEID") + "'  "
+                                + ",'" + rs1.getString("IMEI_ESN_MEID") + "'  "
                                 + " , '" + operator + "' "
                                 + ")";
                     } else {
-                        device_db_query = "update  device_db set counter = " + (dvcDbCounter + 1) + " where imei_esn_meid = '" + rs1.getString("IMEIESNMEID").substring(0, 14) + "' ";
+                        device_db_query = "update  " + appdbName + ".device_db set counter = " + (dvcDbCounter + 1) + " where imei_esn_meid = '" + rs1.getString("IMEI_ESN_MEID").substring(0, 14) + "' ";
                     }
 
-                    device_custom_db_qry = "insert into device_custom_db (device_id_type,created_on,device_launch_date,device_status,"
-                            + "device_type,imei_esn_meid,modified_on,multiple_sim_status,period,sn_of_device,txn_id ,feature_name  ,user_id  ,actual_imei , tac  ) " // 
-                            + "values('" + rs1.getString("DeviceIdType") + "'," + " " + dateFunction + "," + "'"
-                            + rs1.getString("Devicelaunchdate") + "'," + "'" + rs1.getString("DeviceStatus") + "',"
-                            + "'" + rs1.getString("DeviceType") + "'," + "'" + rs1.getString("IMEIESNMEID").substring(0, 14) + "',"
-                            + "" + dateFunction + "," + "'" + rs1.getString("MultipleSIMStatus") + "',"
-                            + "'" + period + "'," + "'" + rs1.getString("SNofDevice") + "',"
+                    device_custom_db_qry = "insert into " + appdbName + ".device_custom_db (device_id_type,created_on,device_launch_date,device_status,"
+                            + "device_type,imei_esn_meid,modified_on,multiple_sim_status,period,sn_of_device,txn_id ,feature_name  ,user_id  ,actual_imei , tac  ) " //
+                            + "values('" + rs1.getString("Device_Id_Type") + "'," + " " + dateFunction + "," + ""
+                            + deviceLaunchDate + "," + "'" + rs1.getString("Device_Status") + "',"
+                            + "'" + rs1.getString("Device_Type") + "'," + "'" + rs1.getString("IMEI_ESN_MEID").substring(0, 14) + "',"
+                            + "" + dateFunction + "," + "'" + rs1.getString("Mul_SIM_Status") + "',"
+                            + "'" + period + "'," + "'" + rs1.getString("SNo_of_Device") + "',"
                             + "'" + txn_id + "'  "
-                            + " , '" + operator + "' ,  '" + feature_file_management.get("user_id") + "'  ,  '" + rs1.getString("IMEIESNMEID") + "' ,  '" + rs1.getString("IMEIESNMEID").substring(0, 8) + "'      "
+                            + " , '" + operator + "' ,  '" + feature_file_management.get("user_id") + "'  ,  '" + rs1.getString("IMEI_ESN_MEID") + "' ,  '" + rs1.getString("IMEI_ESN_MEID").substring(0, 8) + "'      "
                             + ")";
 
                     if (stolenRecvryBlock == 1) {
                         if (stolnRcvryDetails.get("operation").equals("0")) {
-                            device_greylist_db_qry = "insert into   greylist_db (created_on , imei, user_id , txn_id , mode_type  , request_type, user_type  , complain_type, "
+                            device_greylist_db_qry = "insert into   " + appdbName + ".grey_list ( imei, user_id , txn_id , mode_type  , request_type, user_type  , complain_type, "
                                     + " device_id_type , device_status , device_type  , multiple_sim_status ,actual_imei , tac )   "
-                                    + "values(           " + "" + dateFunction + "," + "'" + rs1.getString("IMEIESNMEID").substring(0, 14)
-                                    + "'," + " ( select username from users where users.id=  "
+                                    + "values(  " + "'" + rs1.getString("IMEI_ESN_MEID").substring(0, 14)
+                                    + "'," + " ( select username from " + appdbName + ".users where users.id=  "
                                     + feature_file_management.get("user_id") + "  )  ,  " + " '" + txn_id + "', " + "'"
                                     + stolnRcvryDetails.get("source") + "'," + "'" + stolnRcvryDetails.get("reason")
                                     + "'," + "'" + stolnRcvryDetails.get("usertype") + "'," + "'"
-                                    + stolnRcvryDetails.get("complaint_type") + "' ,  '" + rs1.getString("DeviceIdType") + "',   '" + rs1.getString("DeviceStatus") + "',     '" + rs1.getString("DeviceType") + "' ,     '" + rs1.getString("MultipleSIMStatus") + "'  ,     '" + rs1.getString("IMEIESNMEID") + "'  ,  '" + rs1.getString("IMEIESNMEID").substring(0, 8) + "'      )";
+                                    + stolnRcvryDetails.get("complaint_type") + "' ,  '" + rs1.getString("Device_Id_Type") + "',   '" + rs1.getString("Device_Status") + "',     '" + rs1.getString("Device_Type") + "' ,     '" + rs1.getString("Mul_SIM_Status") + "'  ,     '" + rs1.getString("IMEI_ESN_MEID") + "'  ,  '" + rs1.getString("IMEI_ESN_MEID").substring(0, 8) + "'      )";
                         } else {
-                            device_greylist_db_qry = "delete from greylist_db where imei  = '"
-                                    + rs1.getString("IMEIESNMEID").substring(0, 14) + "' ";
-                            my_query = "update  " + feature_file_mapping.get("output_device_db") + "  set device_status = '" + dvsStatus + "'  where imei_esn_meid  = '" + rs1.getString("IMEIESNMEID").substring(0, 14) + "'";
+                            device_greylist_db_qry = "delete from " + appdbName + ".grey_list where imei  = '"
+                                    + rs1.getString("IMEI_ESN_MEID").substring(0, 14) + "' ";
+                            my_query = "update  " + feature_file_mapping.get("output_device_db") + "  set device_status = '" + dvsStatus + "'  where imei_esn_meid  = '" + rs1.getString("IMEI_ESN_MEID").substring(0, 14) + "'";
                         }
-                        device_greylist_History_db_qry = "insert into   greylist_db_history (created_on , imei, user_id , txn_id , mode_type  , request_type, user_type  , complain_type ,operation    ,  device_id_type , device_status , device_type ,MULTIPLE_SIM_STATUS ,actual_imei , tac  )   "
-                                + "values(           " + "" + dateFunction + "," + "'" + rs1.getString("IMEIESNMEID").substring(0, 14)
-                                + "'," + " ( select username from users where users.id=  "
+                        device_greylist_History_db_qry = "insert into   " + appdbName + ".grey_list_history ( imei, user_id , txn_id , mode_type  , request_type, user_type  , complain_type ,operation    ,  device_id_type , device_status , device_type ,MULTIPLE_SIM_STATUS ,actual_imei , tac  )   "
+                                + "values(           " + " " + "'" + rs1.getString("IMEI_ESN_MEID").substring(0, 14)
+                                + "'," + " ( select username from " + appdbName + ".users where users.id=  "
                                 + feature_file_management.get("user_id") + "  )  ,  " + " '" + txn_id + "', " + "'"
                                 + stolnRcvryDetails.get("source") + "'," + "'" + stolnRcvryDetails.get("reason") + "',"
                                 + "'" + stolnRcvryDetails.get("usertype") + "'," + "'"
                                 + stolnRcvryDetails.get("complaint_type") + "' , " + "'"
-                                + stolnRcvryDetails.get("operation") + "'    ,  '" + rs1.getString("DeviceIdType") + "', '" + rs1.getString("DeviceStatus") + "','" + rs1.getString("DeviceType") + "' , ,     '" + rs1.getString("MultipleSIMStatus") + "' ,     '" + rs1.getString("IMEIESNMEID") + "' ,  '" + rs1.getString("IMEIESNMEID").substring(0, 8) + "'       )";
+                                + stolnRcvryDetails.get("operation") + "'    ,  '" + rs1.getString("Device_Id_Type") + "', '" + rs1.getString("Device_Status") + "','" + rs1.getString("Device_Type") + "' , ,     '" + rs1.getString("Mul_SIM_Status") + "' ,     '" + rs1.getString("IMEI_ESN_MEID") + "' ,  '" + rs1.getString("IMEI_ESN_MEID").substring(0, 8) + "'       )";
                     }
-                    stmt1.addBatch(my_query);
                     logger.info("my_query  : " + my_query);
-                    if (rrslt != 0) {
-                        stmt3.addBatch(device_custom_db_qry);
-                        logger.info("device_custom_db_qry  : " + device_custom_db_qry);
+                    stmt1.addBatch(my_query);
+                    if (operator.equalsIgnoreCase("Stock")) {
+                         customUserForStock = cEIRFeatureFileParser.getCustomData(conn, txn_id); //  1  for custom select user_type from stock_mgmt where txn_id
+                        if (customUserForStock != 0) {
+                            stmt3.addBatch(device_custom_db_qry);
+                            logger.info("device_custom_db_qry  : " + device_custom_db_qry);
+                        }
                     }
                     if (stolenRecvryBlock == 1) {
-                        insertFromImporterManufactor(conn, rs1, stolnRcvryDetails, feature_file_management, feature_file_mapping, dateFunction, period, txn_id, operator, sub_feature);
+                        // uncomment when importer/consignment feature avaialable
+                  //      insertFromImporterManufactor(conn, rs1, stolnRcvryDetails, feature_file_management, feature_file_mapping, dateFunction, period, txn_id, operator, sub_feature);
+
                     } else {
-//                              try {
                         logger.info("device_db_query:  : " + device_db_query);
                         stmt2.executeUpdate(device_db_query);
-
-//                              } catch (Exception e) {
-//                                   logger.error("Error in device_db   " + e);
-//                              }
                     }
                     split_upload_batch_count++;
                     if (split_upload_batch_count == split_upload_batch_no) {
                         stmt1.executeBatch();
                         conn.commit();
-                        if (rrslt != 0) {
+                        if (customUserForStock != 0) {
                             stmt3.executeBatch();
                             conn.commit();
                         }
@@ -348,7 +348,7 @@ public class ConsignmentInsertUpdate {
                 }               // WHILE CLOSE END
                 stmt1.executeBatch();
                 conn.commit();
-                if (rrslt != 0) {
+                if (customUserForStock != 0) {
                     stmt3.executeBatch();
                     conn.commit();
                 }
@@ -372,10 +372,10 @@ public class ConsignmentInsertUpdate {
                     logger.info(" sourceTacList SIZE:: " + sourceTacList.size());
                     Map<String, Long> map = sourceTacList.stream()
                             .collect(Collectors.groupingBy(c -> c, Collectors.counting()));
-                    map.forEach((k, v) -> new HexFileReader().insertSourceTac(conn, k, device_info.get("file_name"), v, "source_tac_inactive_info"));
+                    map.forEach((k, v) -> new SourceTacInactiveInfoDao().insertSourceTac(conn, k, device_info.get("file_name"), v, "source_tac_inactive_info"));
                 }
                 ceirfunction.UpdateStatusViaApi(conn, txn_id, 2, operator);
-                ceirfunction.updateFeatureFileStatus(conn, txn_id, 4, operator, sub_feature);
+                webActionDbDao.updateFeatureFileStatus(conn, txn_id, 4, operator, sub_feature);
             }       // ELSE CLOSE END
 
             if (operator.equalsIgnoreCase("STOCK") || operator.equalsIgnoreCase("CONSIGNMENT")) {
@@ -389,16 +389,16 @@ public class ConsignmentInsertUpdate {
             conn.commit();
 
         } catch (Exception e) {
+            logger.error(e + "in ["+ Arrays.stream(e.getStackTrace()).filter(ste -> ste.getClassName().equals(this.getClass().getName())).collect(Collectors.toList()).get(0) +"]");
             new ErrorFileGenrator().gotoErrorFile(conn, txn_id, "  Something went Wrong. Please Contact to Ceir Admin.  ");
             new CEIRFeatureFileFunctions().UpdateStatusViaApi(conn, txn_id, 1, operator);       //1 for reject
-            new CEIRFeatureFileFunctions().updateFeatureFileStatus(conn, txn_id, 5, operator, sub_feature); // update web_action_db    
+            webActionDbDao.updateFeatureFileStatus(conn, txn_id, 5, operator, sub_feature); // update web_action_db
 
-            logger.error("Error.." + e);
         } finally {
             try {
                 bw.close();
             } catch (Exception e) {
-                logger.error("Error....." + e);
+                logger.error(e + "in ["+ Arrays.stream(e.getStackTrace()).filter(ste -> ste.getClassName().equals(this.getClass().getName())).collect(Collectors.toList()).get(0) +"]");
             }
         }
     }
@@ -406,13 +406,13 @@ public class ConsignmentInsertUpdate {
     private void insertFromImporterManufactor(Connection conn, ResultSet rs1, HashMap<String, String> stolnRcvryDetails, HashMap<String, String> feature_file_management, HashMap<String, String> feature_file_mapping, String dateFunction, String period, String txn_id, String feature_name, String subFeature) {
         logger.info("insertFromImporterManufactor.. ");
         try {
-            String qry = " select a.imei_esn_meid  , a.sn_of_device      from device_importer_db  a , device_importer_db  b  where a.sn_of_device = b.sn_of_device "
+            String qry = " select a.imei_esn_meid  , a.sn_of_device      from " + appdbName + ".device_importer_db  a , " + appdbName + ".device_importer_db  b  where a.sn_of_device = b.sn_of_device "
                     + "and b.imei_esn_meid = '" + rs1.getString("IMEIESNMEID").substring(0, 14) + "' "
-                    //                    + " and a.imei_esn_meid  not in(select imei_esn_meid  from device_lawful_db ) "  
+                    //                    + " and a.imei_esn_meid  not in(select imei_esn_meid  from device_lawful ) "
                     + " and a.imei_esn_meid != '" + rs1.getString("IMEIESNMEID").substring(0, 14) + "'  union  "
-                    + "select a.imei_esn_meid  , a.sn_of_device        from device_manufacturer_db  a , device_manufacturer_db  b  where a.sn_of_device = b.sn_of_device and"
+                    + "select a.imei_esn_meid  , a.sn_of_device        from " + appdbName + ".device_manufacturer_db  a , device_manufacturer_db  b  where a.sn_of_device = b.sn_of_device and"
                     + " b.imei_esn_meid = '" + rs1.getString("IMEIESNMEID").substring(0, 14) + "' "
-                    //                    + " and a.imei_esn_meid  not in(select imei_esn_meid  from device_lawful_db ) "  
+                    //                    + " and a.imei_esn_meid  not in(select imei_esn_meid  from device_lawful ) "
                     + " and a.imei_esn_meid != '" + rs1.getString("IMEIESNMEID").substring(0, 14) + "'  ";
 
             logger.info("insertFromImporterManufactor.. query is ::" + qry);
@@ -425,10 +425,10 @@ public class ConsignmentInsertUpdate {
             String device_greylist_db_qry = null;
             String device_greylist_History_db_qry = null;
             while (rs.next()) {
-                my_query = "insert into " + feature_file_mapping.get("output_device_db")
+                my_query = "insert into " + appdbName + "." + feature_file_mapping.get("output_device_db")
                         + " (device_id_type,created_on,device_launch_date,device_status,"
                         + "device_type,imei_esn_meid,modified_on,multiple_sim_status,period,sn_of_device,txn_id,user_id  ,FEATURE_NAME , actual_imei ,tac ) "
-                        + "values(" + "'" + rs1.getString("DeviceIdType") + "'," + "" + dateFunction + "," /// "dd-MMM-YY"                              
+                        + "values(" + "'" + rs1.getString("DeviceIdType") + "'," + "" + dateFunction + "," /// "dd-MMM-YY"
                         + "'" + rs1.getString("Devicelaunchdate") + "', '" + stolnRcvryDetails.get("divceStatus") + "'  ,'" + rs1.getString("DeviceType") + "',"
                         + "'" + rs.getString("imei_esn_meid").substring(0, 14)
                         + "'," + "" + dateFunction + "," + "'" + rs1.getString("MultipleSIMStatus") + "'," + "'"
@@ -447,12 +447,12 @@ public class ConsignmentInsertUpdate {
 //                                 + stolnRcvryDetails.get("complaint_type") + "'  " + ")";
 //                    } else {
 //                         device_greylist_db_qry = "delete from greylist_db where imei  = '" + rs.getString("imei_esn_meid") + "' ";
-//   status on based on Block; pOA ;  Unblock :pOD 
+//   status on based on Block; pOA ;  Unblock :pOD
 //                         my_query = "    update    " + feature_file_mapping.get("output_device_db") + "  set device_status = '"+dvsStatus+"'  where imei_esn_meid  = '" + rs1.getString("IMEIESNMEID") + "'";
 //                         my_query = "    delete from    " + feature_file_mapping.get("output_device_db")
 //                                 + " where imei_esn_meid  = '" + rs.getString("imei_esn_meid") + "'";
 //                    }
-//                    device_greylist_History_db_qry = "insert into   greylist_db_history (created_on , imei, user_id , txn_id , mode_type  , request_type, user_type  , complain_type ,operation)   "
+//                    device_greylist_History_db_qry = "insert into   grey_list_history (created_on , imei, user_id , txn_id , mode_type  , request_type, user_type  , complain_type ,operation)   "
 //                            + "values(           " + "" + dateFunction + "," + "'" + rs.getString("imei_esn_meid")
 //                            + "'," + " ( select username from users where users.id=  "
 //                            + feature_file_management.get("user_id") + "  )  ,  " + " '" + txn_id + "', " + "'"
@@ -490,9 +490,9 @@ public class ConsignmentInsertUpdate {
         } catch (Exception e) {
             new ErrorFileGenrator().gotoErrorFile(conn, txn_id, " Something went Wrong. Please Contact to Ceir Admin.  ");
             new CEIRFeatureFileFunctions().UpdateStatusViaApi(conn, txn_id, 1, feature_name);       //1 for reject
-            new CEIRFeatureFileFunctions().updateFeatureFileStatus(conn, txn_id, 5, feature_name, subFeature); // update web_action_db       
-            logger.error("Error.." + e);
-               System.exit(0);
+            new WebActionDbDao().updateFeatureFileStatus(conn, txn_id, 5, feature_name, subFeature); // update web_action_db
+            logger.error(e + "in ["+ Arrays.stream(e.getStackTrace()).filter(ste -> ste.getClassName().equals(this.getClass().getName())).collect(Collectors.toList()).get(0) +"]");
+            System.exit(0);
         }
 
     }
@@ -502,8 +502,8 @@ public class ConsignmentInsertUpdate {
         try {
             Statement stmt = conn.createStatement();
 
-            String qry = " insert into  device_details_report_db ( created_on, modified_on, txn_id ,feature , sub_feature , total_insert_count  ,tableName , startTime , endTime     ) "
-                    + "  values ( " + Util.defaultDateNow(true) + " , " + Util.defaultDateNow(true) + " , '" + txn_id + "', '" + operator + "', '" + sub_feature + "', '" + totalCount + "', '" + tableName + "',     TO_DATE('" + startTime + "','YYYY-MM-DD HH24:MI:SS') ,  TO_DATE('" + EndTime + "','YYYY-MM-DD HH24:MI:SS')           ) ";
+            String qry = " insert into  " + appdbName + ".device_details_report_db (  txn_id ,feature , sub_feature , total_insert_count  ,tableName , startTime , endTime     ) "
+                    + "  values ( '" + txn_id + "', '" + operator + "', '" + sub_feature + "', '" + totalCount + "', '" + tableName + "',     TO_DATE('" + startTime + "','YYYY-MM-DD HH24:MI:SS') ,  TO_DATE('" + EndTime + "','YYYY-MM-DD HH24:MI:SS')           ) ";
             logger.info("" + qry);
 
             stmt.executeUpdate(qry);
@@ -521,7 +521,7 @@ public class ConsignmentInsertUpdate {
         try {
             imei = imei.substring(0, 14);
             stmt = conn.createStatement();
-            String qry = "select counter from device_db where imei_esn_meid = '" + imei + "' ";
+            String qry = "select counter from " + appdbName + ".device_db where imei_esn_meid = '" + imei + "' ";
             logger.info("getCounterFromDeviceDb qry " + qry);
             rs = stmt.executeQuery(qry);
             while (rs.next()) {
@@ -543,7 +543,7 @@ public class ConsignmentInsertUpdate {
     private void insertInStolenprocssDb(Connection conn, String outputDb, String imei, String serailNo, String txn_id) {
         try {
             Statement stmt = conn.createStatement();
-            String qry = " insert into  stolen_process_db ( created_on, modified_on, txn_id,      tableName , imei_esn_meid , SERAILNO    ) "
+            String qry = " insert into  " + appdbName + ".stolen_process_db ( created_on, modified_on, txn_id,      tableName , imei_esn_meid , SERAILNO    ) "
                     + "  values ( " + Util.defaultDateNow(true) + " , " + Util.defaultDateNow(true) + " , '" + txn_id + "', '" + outputDb + "', '" + imei + "', '" + serailNo + "'        ) ";
             logger.info("" + qry);
             stmt.executeUpdate(qry);
@@ -558,7 +558,7 @@ public class ConsignmentInsertUpdate {
         try {
             Statement raw_stmt = conn.createStatement();
             raw_stmt = conn.createStatement();
-            String raw_query = " delete from " + operator + "_raw" + "  where TXN_ID ='" + txn_id + "'";
+            String raw_query = " delete from " + appdbName + "." + operator + "_temp_data " + "  where txn_id ='" + txn_id + "'";
             logger.info("delete raw table .." + raw_query);
             raw_stmt.executeUpdate(raw_query);
             raw_stmt.close();

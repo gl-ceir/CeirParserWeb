@@ -1,7 +1,5 @@
 package com.glocks.parser;
 
-import javax.sound.sampled.Port;
-
 public class CDRColumn {
 
     String columName;
@@ -15,4 +13,3 @@ public class CDRColumn {
     }
 
 }
-

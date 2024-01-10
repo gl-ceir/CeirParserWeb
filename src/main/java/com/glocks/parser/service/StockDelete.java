@@ -1,21 +1,18 @@
 package com.glocks.parser.service;
 
-import java.sql.Connection;
-import java.util.ArrayList;
-import java.util.List;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import com.glocks.constants.Usertypes;
 import com.glocks.dao.DeviceDbDao;
-import com.glocks.dao.ManagementAudTableDao;
 import com.glocks.dao.ManagementTableDao;
 import com.glocks.dao.StockMgmtDao;
 import com.glocks.parser.Rule;
-import com.glocks.pojo.ManagementDb;
 import com.glocks.pojo.ManagementTable;
 import com.glocks.pojo.StockMgmt;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import java.sql.Connection;
+import java.util.ArrayList;
+import java.util.List;
 
 public class StockDelete {
 

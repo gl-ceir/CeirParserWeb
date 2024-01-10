@@ -6,14 +6,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Objects;
 import java.util.Properties;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.context.annotation.PropertySources;
 import org.springframework.stereotype.Component;
-
 
 @Component
 @PropertySources({
@@ -34,8 +32,12 @@ public class PropertyReader {
 
     @Value("${oamdbName}")
     public String oamdbName;
-    
-    
+
+    @Value("${serverName}")
+    public String serverName;
+
+    @Value("${ip}")
+    public String ip;
 
     private InputStream inputStream;
     Properties prop;

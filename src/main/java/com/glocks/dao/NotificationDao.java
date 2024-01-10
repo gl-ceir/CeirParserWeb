@@ -1,5 +1,7 @@
 package com.glocks.dao;
 
+import static com.glocks.parser.MainController.appdbName;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -18,7 +20,7 @@ public class NotificationDao {
 		boolean isOracle = conn.toString().contains("oracle");
 		String dateFunction = Util.defaultDate(isOracle);
 		
-		String query = "insert into notification ( channel_type, created_on, feature_id, feature_name, "
+		String query = "insert into "+appdbName+".notification ( channel_type, created_on, feature_id, feature_name, "
 				+ "message, modified_on, sub_feature, user_id, feature_txn_id, status, "
 				+ "retry_count, subject, refer_table, role_type, receiver_user_type" 
 				+ ") values (?," + dateFunction + ",?,?,?," + dateFunction + ",?,?,?,0,0,?,'USERS',?,?)";

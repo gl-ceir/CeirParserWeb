@@ -1,5 +1,7 @@
 package com.glocks.dao;
 
+import static com.glocks.parser.MainController.appdbName;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -18,7 +20,7 @@ public class PolicyBreachNotificationDao {
           boolean isOracle = conn.toString().contains("oracle");
           String dateFunction = Util.defaultDate(isOracle);
 
-          String query = "insert into policy_breach_notification ( channel_type,CONTACT_NUMBER, IMEI,message,RETRY_COUNT ,created_on, modified_on) values "
+          String query = "insert into "+appdbName+".policy_breach_notification ( channel_type,CONTACT_NUMBER, IMEI,message,RETRY_COUNT ,created_on, modified_on) values "
                   + " (?, ?,?, ? ,0 , " + dateFunction + "," + dateFunction + ")";
 
           try (PreparedStatement preparedStatement = conn.prepareStatement(query);) {

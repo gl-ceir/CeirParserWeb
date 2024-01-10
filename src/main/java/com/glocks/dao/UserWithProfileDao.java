@@ -9,6 +9,11 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.glocks.pojo.UserWithProfile;
+import static com.glocks.parser.MainController.appdbName;
+
+
+
+
 
 public class UserWithProfileDao {
 	static Logger logger = LogManager.getLogger(UserWithProfileDao.class);
@@ -20,19 +25,19 @@ public class UserWithProfileDao {
 		String query = null;
 
 		try{
-			query = "select users.id as id, user_profile.first_name as first_name, "
-					+ "usertype.usertype_name as usertype_name "
-					+ "from users "
-					+ "inner join user_profile on users.id=user_profile.userid "
-					+ "inner join usertype on users.usertype_id=usertype.id " 
-					+ "where users.id=" + userId;
+			query = "select "+appdbName+".users.id as id, "+appdbName+".user_profile.first_name as first_name, "
+					+ ""+appdbName+".user_type.user_type_name as usertype_name "
+					+ "from "+appdbName+".users "
+					+ "inner join "+appdbName+".user_profile on "+appdbName+".users.id="+appdbName+".user_profile.userid "
+					+ "inner join "+appdbName+".user_type on "+appdbName+".users.user_type_id="+appdbName+".user_type.id "
+					+ "where "+appdbName+".users.id=" + userId;
 
 			logger.info("Query ["+query+"]"); 
 			stmt  = conn.createStatement();
 			rs = stmt.executeQuery(query);
 
 			if(rs.next()){
-				return new UserWithProfile(rs.getLong("id"), rs.getString("first_name"), rs.getString("usertype_name"));
+				return new UserWithProfile(rs.getLong("id"), rs.getString("first_name"), rs.getString("user_type_name"));
 			}
 		}
 		catch(Exception e){

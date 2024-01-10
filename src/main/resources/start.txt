@@ -1,3 +1,10 @@
+LogWriter.java - logPath
+
+
+
+
+
+
 Cron
 CeirParser,a-s,172.24.2.57,172.24.2.58,E-APP-01,E-APP-02,Y,172.24.3.89,./start.sh,/u01/ceirapp/BackendProcess/CeirParser
 
